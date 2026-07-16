@@ -83,9 +83,10 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 <div id="gate" class="gate card">
   <h1 style="font-size:17px;margin-bottom:6px">항공보안 관리</h1>
   <p class="muted" style="margin-bottom:16px">케이터링운영파트</p>
-  <input id="pin" type="password" inputmode="numeric" placeholder="PIN 입력" style="text-align:center;letter-spacing:4px;margin-bottom:10px">
-  <button class="pri" style="width:100%" onclick="login()">입장</button>
-  <p id="pinErr" class="muted hide" style="color:var(--bad);margin-top:8px">PIN이 올바르지 않습니다</p>
+  <input id="uid" placeholder="아이디" autocomplete="username" style="text-align:center;margin-bottom:8px">
+  <input id="upw" type="password" placeholder="비밀번호" autocomplete="current-password" style="text-align:center;margin-bottom:10px">
+  <button class="pri" style="width:100%" onclick="login()">로그인</button>
+  <p id="pinErr" class="muted hide" style="color:var(--bad);margin-top:8px"></p>
 </div>
 
 <div id="app" class="hide">
@@ -274,8 +275,8 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 <script>
 const SUPA_URL = 'https://wuimgtvolkqpdaktiiuk.supabase.co';
 const SUPA_KEY = 'sb_publishable_RHGKxl7htTXFemHSGQsvGQ_dl1g_30u';
-const PIN_TEAM = '0000';
-const PIN_ADMIN = '1234';
+const DOMAIN = '@team.local';
+const ADMIN_EMAIL = 'esr@team.local';
 const BUCKET = 'training-pdfs';
 
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -288,19 +289,23 @@ const pdfUrl = p => `${SUPA_URL}/storage/v1/object/public/${BUCKET}/${p}`;
 const days = d => Math.round((new Date(d) - new Date(new Date().toDateString())) / 86400000);
 const plus1y = d => { if (!d) return null; const x = new Date(d); x.setFullYear(x.getFullYear() + 1); return x.toISOString().slice(0, 10); };
 
-function login() {
-  const v = $('pin').value.trim();
-  if (v !== PIN_TEAM && v !== PIN_ADMIN) { $('pinErr').classList.remove('hide'); return; }
-  isAdmin = (v === PIN_ADMIN);
-  sessionStorage.setItem('sec_role', isAdmin ? 'admin' : 'team');
+async function login() {
+  const id = $('uid').value.trim().toLowerCase();
+  const pw = $('upw').value;
+  if (!id || !pw) { showErr('아이디와 비밀번호를 입력하세요'); return; }
+  const email = id.includes('@') ? id : id + DOMAIN;
+  const { data, error } = await db.auth.signInWithPassword({ email, password: pw });
+  if (error) { showErr('아이디 또는 비밀번호가 올바르지 않습니다'); return; }
+  isAdmin = (data.user.email === ADMIN_EMAIL);
   start();
 }
-function logout() { sessionStorage.removeItem('sec_role'); location.reload(); }
+function showErr(m) { const e = $('pinErr'); e.textContent = m; e.classList.remove('hide'); }
+async function logout() { await db.auth.signOut(); location.reload(); }
 
 function start() {
   $('gate').classList.add('hide');
   $('app').classList.remove('hide');
-  $('role').textContent = isAdmin ? '관리자' : '팀원 (열람)';
+  $('role').textContent = isAdmin ? '관리자' : '열람';
   document.querySelectorAll('.adm').forEach(e => { if (!isAdmin) e.style.display = 'none'; });
   load();
 }
@@ -797,10 +802,13 @@ function exportCsv(kind) {
   }
 }
 
-$('pin').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+$('upw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); }));
-const saved = sessionStorage.getItem('sec_role');
-if (saved) { isAdmin = saved === 'admin'; start(); }
+
+(async () => {
+  const { data } = await db.auth.getSession();
+  if (data.session) { isAdmin = (data.session.user.email === ADMIN_EMAIL); start(); }
+})();
 </script>
 </body>
 </html>
