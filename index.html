@@ -259,7 +259,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
     <div><label class="f">직위</label><input id="p_pos"></div>
     <div><label class="f">사번</label><input id="p_no"></div>
     <div><label class="f">입사일</label><input type="date" id="p_hire"></div>
-    <div><label class="f">근무상태</label><select id="p_stat"><option>재직</option><option>휴직</option><option>퇴사</option></select></div>
+    <div><label class="f">근무상태</label><select id="p_stat"><option>재직</option><option>휴직</option><option>전임</option><option>퇴사</option></select></div>
     <div><label class="f">퇴사일</label><input type="date" id="p_leave"></div>
     <div><label class="f">명부 순번</label><input type="number" id="p_sort"></div>
   </div>
@@ -341,7 +341,7 @@ function tab(n) {
 
 /* ---------- 대시보드 ---------- */
 function awareRows() {
-  return EMP.filter(e => e.status !== '퇴사').map(e => {
+  return EMP.filter(e => e.status === '재직' || e.status === '휴직').map(e => {
     const my = AT.filter(a => a.employee_id === e.id)
       .map(a => TR.find(t => t.id === a.training_id))
       .filter(t => t && t.edu_type === '인지교육')
@@ -509,7 +509,7 @@ function renderCard() {
 
 /* ---------- 인원명부 ---------- */
 function renderEmp() {
-  $('empBody').innerHTML = EMP.map((e, i) => `<tr style="${e.status === '퇴사' ? 'opacity:.5' : ''}">
+  $('empBody').innerHTML = EMP.map((e, i) => `<tr style="${(e.status === '퇴사' || e.status === '전임') ? 'opacity:.5' : ''}">
     <td>${e.sort_no ?? i + 1}</td><td>${esc(e.name)}</td><td class="muted">${esc(e.name_en)}</td>
     <td>${esc(e.position)}</td><td>${esc(e.emp_no)}</td><td class="muted">${e.hire_date || '-'}</td>
     <td>${esc(e.duty)}</td>
@@ -535,7 +535,7 @@ function eduTypeChange() {
   $('eduTitle').textContent = ($('e_id').value ? '수정' : '등록') + ' · ' + $('e_type').value;
 }
 function atBoxes(checked = []) {
-  $('atList').innerHTML = EMP.filter(e => e.status !== '퇴사').map(e => {
+  $('atList').innerHTML = EMP.filter(e => e.status === '재직' || e.status === '휴직').map(e => {
     const on = checked.find(c => c.employee_id === e.id);
     return `<label class="chk ${e.status === '휴직' ? 'off' : ''}">
       <input type="checkbox" class="at" value="${e.id}" ${on ? 'checked' : ''} onchange="atCnt()">
