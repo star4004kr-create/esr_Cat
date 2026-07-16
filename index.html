@@ -75,6 +75,11 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 .sec h3{font-size:13px;font-weight:600;margin-bottom:9px;color:var(--ink2)}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:var(--r);font-size:13px;z-index:99;display:none}
 .scroll{overflow-x:auto}
+.hubcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .12s}
+.hubcard:hover{border-color:var(--navy)}
+.hubico{width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.hubcard .t{font-size:17px;font-weight:600;margin-bottom:6px}
+.hubcard .d{font-size:12.5px;color:var(--ink2);line-height:1.5}
 @media(max-width:640px){.vrow{grid-template-columns:1fr}}
 </style>
 </head>
@@ -89,10 +94,41 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <p id="pinErr" class="muted hide" style="color:var(--bad);margin-top:8px"></p>
 </div>
 
+<!-- 허브(홈) -->
+<div id="hub" class="hide">
+<header><div class="wrap">
+  <div><h1>항공보안 통합 관리</h1><div class="sub">케이터링운영파트</div></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="hubRole" class="badge b-gray"></span>
+    <button class="mini" onclick="logout()">잠금</button>
+  </div>
+</div></header>
+<div class="wrap" style="max-width:620px">
+  <p class="muted" style="text-align:center;margin:44px 0 26px">관리할 업무를 선택하세요</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+    <div class="hubcard" onclick="goEdu()">
+      <div class="hubico" style="background:var(--navy-l)">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#123a63" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg>
+      </div>
+      <div class="t">보안교육</div>
+      <div class="d">보안지시 · 인지교육 · 개인기록카드 · 인원명부</div>
+    </div>
+    <div class="hubcard" onclick="goInsp()">
+      <div class="hubico" style="background:var(--ok-bg)">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0f6e56" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><path d="M9 3h6v3H9z"/><path d="m9 14 2 2 4-4"/></svg>
+      </div>
+      <div class="t">보안점검</div>
+      <div class="d">서지청 · 국토부 등 점검 대응 자료실</div>
+    </div>
+  </div>
+</div>
+</div>
+
 <div id="app" class="hide">
 <header><div class="wrap">
   <div><h1>항공보안 관리</h1><div class="sub">케이터링운영파트</div></div>
   <div style="display:flex;gap:8px;align-items:center">
+    <button class="mini" onclick="goHub()">← 홈</button>
     <span id="role" class="badge b-gray"></span>
     <button class="mini" onclick="logout()">잠금</button>
   </div>
@@ -202,6 +238,54 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 
 </div>
 </div>
+
+<!-- 보안점검 자료실 -->
+<div id="insp" class="hide">
+<header><div class="wrap">
+  <div><h1>보안점검 자료실</h1><div class="sub">케이터링운영파트</div></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="mini" onclick="goHub()">← 홈</button>
+    <span id="inspRole" class="badge b-gray"></span>
+    <button class="mini" onclick="logout()">잠금</button>
+  </div>
+</div></header>
+<div class="wrap">
+  <h2 class="pt">보안점검 항목 <span class="muted" id="inspCnt"></span>
+    <span class="tools">
+      <button class="pri adm" onclick="openInspItem()">＋ 항목 추가</button>
+    </span>
+  </h2>
+  <p class="muted" style="margin:-4px 0 14px">점검 시 이 목록의 자료로 수검합니다. 각 항목의 첨부를 눌러 자료를 확인하세요.</p>
+  <div id="inspBody"></div>
+</div>
+</div>
+
+<!-- 점검 항목 추가/수정 -->
+<div id="mInspItem" class="modal"><div class="box" style="max-width:560px">
+  <h2 style="font-size:16px;margin-bottom:14px" id="inspItemTitle">항목 추가</h2>
+  <input type="hidden" id="it_id">
+  <div style="display:flex;gap:10px">
+    <div style="width:96px"><label class="f">번호</label><input id="it_seq" placeholder="7-1"></div>
+    <div style="flex:1"><label class="f">점검 항목 (원문) *</label><input id="it_title"></div>
+  </div>
+  <div style="margin-top:10px"><label class="f">메모 (선택 · 코멘트/유의사항)</label><textarea id="it_note" rows="3"></textarea></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mInspItem')">취소</button>
+    <button class="pri" id="inspItemSave" onclick="saveInspItem()">저장</button>
+  </div>
+</div></div>
+
+<!-- 첨부 추가 -->
+<div id="mInspFile" class="modal"><div class="box" style="max-width:480px">
+  <h2 style="font-size:16px;margin-bottom:14px">첨부 추가</h2>
+  <input type="hidden" id="if_item">
+  <div><label class="f">첨부 이름 *</label><input id="if_name" placeholder="예: 2025 국토부 정기점검 결과"></div>
+  <div style="margin-top:10px"><label class="f">파일 * (PDF/이미지/문서)</label><input type="file" id="if_file"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mInspFile')">취소</button>
+    <button class="pri" id="inspFileSave" onclick="saveInspFile()">업로드</button>
+  </div>
+</div></div>
 
 <!-- 교육 등록/수정 -->
 <div id="mEdu" class="modal"><div class="box">
@@ -329,11 +413,15 @@ async function logout() { await db.auth.signOut(); location.reload(); }
 
 function start() {
   $('gate').classList.add('hide');
-  $('app').classList.remove('hide');
-  $('role').textContent = isAdmin ? '관리자' : '열람';
+  const rt = isAdmin ? '관리자' : '열람';
+  $('role').textContent = rt; $('hubRole').textContent = rt; $('inspRole').textContent = rt;
   document.querySelectorAll('.adm').forEach(e => { if (!isAdmin) e.style.display = 'none'; });
-  load();
+  goHub();
+  load(); loadInsp();
 }
+function goHub() { $('hub').classList.remove('hide'); $('app').classList.add('hide'); $('insp').classList.add('hide'); }
+function goEdu() { $('hub').classList.add('hide'); $('app').classList.remove('hide'); $('insp').classList.add('hide'); }
+function goInsp() { $('hub').classList.add('hide'); $('app').classList.add('hide'); $('insp').classList.remove('hide'); renderInsp(); }
 
 async function load() {
   const [e, t, a, v, f, m] = await Promise.all([
@@ -880,6 +968,104 @@ async function saveEmp() {
     : await db.from('employees').insert(row);
   if (error) { toast('저장 실패: ' + error.message); return; }
   closeM('mEmp'); toast('저장되었습니다'); load();
+}
+
+/* ---------- 보안점검 자료실 ---------- */
+const IBUCKET = 'inspection-docs';
+let IITEM = [], IFILE = [];
+const inspUrl = p => `${SUPA_URL}/storage/v1/object/public/${IBUCKET}/${p}`;
+async function loadInsp() {
+  const [it, fi] = await Promise.all([
+    db.from('inspection_items').select('*').order('sort_order').order('id'),
+    db.from('inspection_files').select('*').order('id')
+  ]);
+  IITEM = it.error ? [] : (it.data || []);
+  IFILE = fi.error ? [] : (fi.data || []);
+  renderInsp();
+}
+function renderInsp() {
+  $('inspCnt').textContent = `총 ${IITEM.length}개 항목`;
+  $('inspBody').innerHTML = IITEM.map(m => {
+    const files = IFILE.filter(f => f.item_id === m.id);
+    const atts = files.length
+      ? files.map((f, i) => `<div class="frow" style="grid-template-columns:1fr auto">
+          <a class="nm" href="${inspUrl(f.file_path)}" target="_blank">첨부 ${i + 1}. ${esc(f.display_name || f.file_name)}</a>
+          <button class="mini adm" onclick="delInspFile(${f.id})">삭제</button>
+        </div>`).join('')
+      : '<p class="muted" style="font-size:12.5px;margin-top:2px">첨부 없음</p>';
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;font-size:14.5px">${m.seq ? `<b>${esc(m.seq)}. </b>` : ''}${esc(m.title)}</div>
+        <span class="tools adm" style="margin:0;flex-shrink:0">
+          <button class="mini pri" onclick="openInspFile(${m.id})">＋첨부</button>
+          <button class="mini" onclick="openInspItem(${m.id})">수정</button>
+          <button class="mini" onclick="delInspItem(${m.id})">삭제</button>
+        </span>
+      </div>
+      ${m.note ? `<div style="margin-top:8px;background:#faf6ec;border:1px solid #efe6cf;border-radius:6px;padding:8px 10px;font-size:12.5px;color:var(--warn);white-space:pre-wrap">${esc(m.note)}</div>` : ''}
+      <div style="margin-top:8px">${atts}</div>
+    </div>`;
+  }).join('') || '<div class="card muted">등록된 점검 항목이 없습니다</div>';
+  if (!isAdmin) document.querySelectorAll('#inspBody .adm').forEach(e => e.style.display = 'none');
+}
+function openInspItem(id) {
+  const m = id ? IITEM.find(x => x.id === id) : null;
+  $('it_id').value = m?.id || ''; $('it_seq').value = m?.seq || ''; $('it_title').value = m?.title || '';
+  $('it_note').value = m?.note || '';
+  $('inspItemTitle').textContent = m ? '항목 수정' : '항목 추가';
+  $('mInspItem').classList.add('on');
+}
+async function saveInspItem() {
+  if (!$('it_title').value.trim()) { toast('점검 항목은 필수입니다'); return; }
+  const id = $('it_id').value ? +$('it_id').value : null;
+  const row = { seq: $('it_seq').value.trim() || null, title: $('it_title').value.trim(), note: $('it_note').value.trim() || null };
+  let error;
+  if (id) { ({ error } = await db.from('inspection_items').update(row).eq('id', id)); }
+  else {
+    row.sort_order = IITEM.reduce((a, b) => Math.max(a, b.sort_order || 0), 0) + 10;
+    ({ error } = await db.from('inspection_items').insert(row));
+  }
+  if (error) { toast('저장 실패: ' + error.message); return; }
+  closeM('mInspItem'); toast('저장되었습니다'); loadInsp();
+}
+async function delInspItem(id) {
+  const m = IITEM.find(x => x.id === id);
+  const n = IFILE.filter(f => f.item_id === id).length;
+  if (!confirm(`이 항목을 삭제합니다.${n ? `\n첨부 ${n}건도 함께 삭제됩니다.` : ''}\n\n${m?.title || ''}`)) return;
+  const paths = IFILE.filter(f => f.item_id === id).map(f => f.file_path);
+  const { error } = await db.from('inspection_items').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (paths.length) await db.storage.from(IBUCKET).remove(paths);
+  toast('삭제되었습니다'); loadInsp();
+}
+function openInspFile(itemId) {
+  $('if_item').value = itemId; $('if_name').value = ''; $('if_file').value = '';
+  $('mInspFile').classList.add('on');
+}
+async function saveInspFile() {
+  const btn = $('inspFileSave'); const f = $('if_file').files[0];
+  if (!$('if_name').value.trim() || !f) { toast('첨부 이름과 파일은 필수입니다'); return; }
+  btn.disabled = true; btn.textContent = '업로드 중...';
+  try {
+    const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
+    const path = `insp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const up = await db.storage.from(IBUCKET).upload(path, f);
+    if (up.error) throw up.error;
+    const { error } = await db.from('inspection_files').insert({
+      item_id: +$('if_item').value, display_name: $('if_name').value.trim(),
+      file_path: path, file_name: f.name });
+    if (error) throw error;
+    closeM('mInspFile'); toast('첨부되었습니다'); await loadInsp();
+  } catch (e) { toast('업로드 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '업로드'; }
+}
+async function delInspFile(id) {
+  if (!confirm('이 첨부를 삭제합니다.')) return;
+  const f = IFILE.find(x => x.id === id);
+  const { error } = await db.from('inspection_files').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (f && f.file_path) await db.storage.from(IBUCKET).remove([f.file_path]);
+  toast('삭제되었습니다'); loadInsp();
 }
 
 /* ---------- CSV ---------- */
