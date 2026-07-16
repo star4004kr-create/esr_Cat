@@ -61,7 +61,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 .chk{display:flex;gap:7px;align-items:center;background:#f7f8fa;border:1px solid var(--line);padding:7px 9px;border-radius:var(--r);font-size:13px;cursor:pointer}
 .chk input{width:auto}
 .chk.off{opacity:.45}
-.vrow{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center}
+.vrow{margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
 .frow{display:grid;grid-template-columns:120px 1fr auto;gap:6px;margin-bottom:6px;align-items:center}
 .frow .nm{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gate{max-width:340px;margin:90px auto;text-align:center}
@@ -101,7 +101,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 <nav><div class="wrap">
   <button class="on" data-t="dash" onclick="tab('dash')">대시보드</button>
   <button data-t="index" onclick="tab('index')">보안지시</button>
-  <button data-t="aware" onclick="tab('aware')">인지교육</button>
+  <button data-t="aware" onclick="tab('aware')">보안교육</button>
   <button data-t="card" onclick="tab('card')">개인기록카드</button>
   <button data-t="emp" onclick="tab('emp')">인원명부</button>
 </div></nav>
@@ -146,12 +146,13 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div class="subnav">
     <button id="sw-list" class="on" onclick="awView('list')">교육 목록</button>
     <button id="sw-stat" onclick="awView('stat')">교육 현황</button>
+    <button id="sw-mat" onclick="awView('mat')">교안·자료</button>
   </div>
 
   <div id="aw-list">
     <div class="card scroll"><table><thead><tr>
-      <th style="width:40px">No</th><th style="width:92px">교육일자</th><th style="width:120px">문서번호</th><th>제목</th>
-      <th style="width:110px">교육장소</th><th style="width:70px">이수구분</th><th style="width:56px">참석</th><th style="width:90px">첨부</th><th style="width:150px" class="adm">관리</th>
+      <th style="width:40px">No</th><th style="width:92px">교육일자</th><th style="width:100px">대상자</th><th>제목</th>
+      <th style="width:100px">교육장소</th><th style="width:100px">강사</th><th style="width:64px">이수</th><th style="width:50px">점수</th><th style="width:80px">첨부</th><th style="width:150px" class="adm">관리</th>
     </tr></thead><tbody id="awListBody"></tbody></table></div>
   </div>
 
@@ -161,6 +162,16 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
       <th style="width:98px">초기교육</th><th style="width:98px">최근교육</th><th style="width:98px">만료일</th><th style="width:80px">유효일</th><th style="width:90px">상태</th><th>이수 이력</th>
     </tr></thead><tbody id="awBody"></tbody></table></div>
     <p class="muted" style="margin-top:8px">만료일 = 최근 인지교육일 + 1년 · 휴직자는 회색 표시, 미이수 집계 제외</p>
+  </div>
+
+  <div id="aw-mat" class="hide">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <span class="muted">인지교육 공통 교안 · 시험지</span>
+        <button class="pri adm" style="margin-left:auto" onclick="openMat()">＋ 자료 업로드</button>
+      </div>
+      <div id="matList"></div>
+    </div>
   </div>
 </section>
 
@@ -270,6 +281,20 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   </div>
 </div></div>
 
+<!-- 교안/자료 업로드 -->
+<div id="mMat" class="modal"><div class="box" style="max-width:480px">
+  <h2 style="font-size:16px;margin-bottom:14px">자료 업로드</h2>
+  <div><label class="f">분류</label>
+    <select id="m_cat"><option>인지교육교안</option><option>시험지</option><option>기타자료</option></select>
+  </div>
+  <div style="margin-top:10px"><label class="f">제목 *</label><input id="m_title" placeholder="2026 항공보안 인지교육 교안"></div>
+  <div style="margin-top:10px"><label class="f">파일 * (PDF/이미지/문서)</label><input type="file" id="m_file"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mMat')">취소</button>
+    <button class="pri" id="matSave" onclick="saveMat()">업로드</button>
+  </div>
+</div></div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -280,7 +305,7 @@ const ADMIN_EMAIL = 'esr@team.local';
 const BUCKET = 'training-pdfs';
 
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
-let EMP = [], TR = [], AT = [], VD = [], ATT = [], isAdmin = false, curTab = 'dash';
+let EMP = [], TR = [], AT = [], VD = [], ATT = [], MAT = [], isAdmin = false, curTab = 'dash';
 
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -311,26 +336,29 @@ function start() {
 }
 
 async function load() {
-  const [e, t, a, v, f] = await Promise.all([
+  const [e, t, a, v, f, m] = await Promise.all([
     db.from('employees').select('*').order('sort_no'),
     db.from('trainings').select('*').order('edu_date', { ascending: false }),
     db.from('attendances').select('*'),
     db.from('vendor_dispatches').select('*'),
-    db.from('attachments').select('*')
+    db.from('attachments').select('*'),
+    db.from('materials').select('*').order('created_at', { ascending: false })
   ]);
   if (e.error || t.error) { toast('데이터 로드 실패: ' + (e.error || t.error).message); return; }
-  EMP = e.data; TR = t.data; AT = a.data || []; VD = v.data || []; ATT = f.data || [];
+  EMP = e.data; TR = t.data; AT = a.data || []; VD = v.data || []; ATT = f.data || []; MAT = m.data || [];
   renderAll();
 }
 const attsOf = tid => ATT.filter(a => a.training_id === tid);
 
-function renderAll() { renderDash(); fillYears(); renderIndex(); renderAwList(); renderAware(); fillCardSel(); renderCard(); renderEmp(); }
+function renderAll() { renderDash(); fillYears(); renderIndex(); renderAwList(); renderAware(); renderMat(); fillCardSel(); renderCard(); renderEmp(); }
 
 function awView(v) {
   $('aw-list').classList.toggle('hide', v !== 'list');
   $('aw-stat').classList.toggle('hide', v !== 'stat');
+  $('aw-mat').classList.toggle('hide', v !== 'mat');
   $('sw-list').classList.toggle('on', v === 'list');
   $('sw-stat').classList.toggle('on', v === 'stat');
+  $('sw-mat').classList.toggle('on', v === 'mat');
 }
 
 function tab(n) {
@@ -359,24 +387,22 @@ function renderDash() {
   const none = A.filter(r => !r.last && r.e.status === '재직').length;
   const nopdf = TR.filter(t => {
     if (t.force_done) return false;
-    const A = attsOf(t.id);
-    const noJ = !A.some(a => a.kind === '교육일지');
-    const noS = t.edu_type === '보안지시' && !A.some(a => a.kind === '서명');
-    return noJ || noS;
+    if (t.edu_type !== '보안지시') return false;
+    return !attsOf(t.id).some(a => a.kind === '서명');
   }).length;
   const nov = VD.filter(v => !v.journal_pdf).length;
   const S = [
     ['만료 경과', over, 'v-bad', 'aware'],
     ['만료 임박 (D-30)', soon, 'v-warn', 'aware'],
     ['인지교육 미이수', none, none ? 'v-bad' : 'v-ok', 'aware'],
-    ['PDF 미첨부', nopdf, nopdf ? 'v-warn' : 'v-ok', 'index'],
+    ['서명 미첨부(보안지시)', nopdf, nopdf ? 'v-warn' : 'v-ok', 'index'],
     ['협력업체 일지 미수령', nov, nov ? 'v-warn' : 'v-ok', 'index'],
-    ['등록 교육 (전체)', TR.length, '', 'index']
+    ['보안 교육 (등록)', TR.filter(t => t.edu_type !== '기타').length, '', 'index']
   ];
   $('stats').innerHTML = S.map(s =>
     `<div class="stat" onclick="tab('${s[3]}')"><div class="l">${s[0]}</div><div class="v ${s[2]}">${s[1]}</div></div>`).join('');
 
-  $('recent').innerHTML = TR.slice(0, 8).map(t => `<tr>
+  $('recent').innerHTML = TR.filter(t => t.edu_type !== '기타').slice(0, 8).map(t => `<tr>
     <td>${t.edu_date}</td><td><span class="badge b-gray">${t.edu_type}</span></td>
     <td>${esc(t.title)}</td><td>${esc(t.place)}</td>
     <td>${AT.filter(a => a.training_id === t.id).length}명</td><td>${pdfBadges(t)}</td></tr>`).join('')
@@ -391,8 +417,9 @@ function pdfBadges(t) {
   const etc = A.filter(a => a.kind === '붙임문서' || a.kind === '기타');
   let out = [];
   if (t.force_done) out.push('<span class="badge b-gray">완료 처리</span>');
-  out.push(j.length ? j.map(a => link(a, 'b-ok', '일지')).join(' ')
-    : (t.force_done ? '' : '<span class="badge b-warn">일지 없음</span>'));
+  // 일지: 첨부됐을 때만 [일지] 표시, 없어도 경고 안 함
+  j.forEach(a => out.push(link(a, 'b-ok', '일지')));
+  // 서명: 보안지시는 없으면 확인 필요(경고), 있으면 [서명]
   if (t.edu_type === '보안지시')
     out.push(s.length ? s.map(a => link(a, 'b-ok', '서명')).join(' ')
       : (t.force_done ? '' : '<span class="badge b-warn">서명 없음</span>'));
@@ -428,7 +455,9 @@ function renderIndex() {
   $('idxBody').innerHTML = rows.map((t, i) => {
     const vs = VD.filter(v => v.training_id === t.id);
     const vtxt = vs.length
-      ? vs.map(v => `<span class="badge ${v.journal_pdf ? 'b-ok' : 'b-warn'}" title="${esc(v.vendor_name)}">${esc(v.vendor_name)}</span>`).join(' ')
+      ? vs.map(v => v.journal_pdf
+          ? `<a class="badge b-ok" href="${pdfUrl(v.journal_pdf)}" target="_blank" title="${esc(v.vendor_name)} 일지 열기">${esc(v.vendor_name)}</a>`
+          : `<span class="badge b-warn" title="${esc(v.vendor_name)} 일지 미수령">${esc(v.vendor_name)}</span>`).join(' ')
       : '<span class="muted">-</span>';
     return `<tr>
       <td>${i + 1}</td><td>${t.edu_date}</td><td class="muted">${esc(t.doc_no)}</td>
@@ -440,16 +469,63 @@ function renderIndex() {
   if (!isAdmin) document.querySelectorAll('#idxBody .adm').forEach(e => e.style.display = 'none');
 }
 
+/* ---------- 교안·자료 ---------- */
+function renderMat() {
+  if (!MAT.length) { $('matList').innerHTML = '<p class="muted">등록된 자료가 없습니다.</p>'; return; }
+  $('matList').innerHTML = `<table><thead><tr>
+    <th style="width:120px">분류</th><th>제목</th><th style="width:90px">파일</th><th style="width:92px">등록일</th><th style="width:60px" class="adm">관리</th>
+  </tr></thead><tbody>${MAT.map(m => `<tr>
+    <td><span class="badge b-gray">${esc(m.category)}</span></td>
+    <td>${esc(m.title)}</td>
+    <td><a class="badge b-ok" href="${SUPA_URL}/storage/v1/object/public/materials/${m.file_path}" target="_blank">열기</a></td>
+    <td class="muted">${(m.created_at || '').slice(0, 10)}</td>
+    <td class="adm"><button class="mini" onclick="delMat(${m.id})">삭제</button></td>
+  </tr>`).join('')}</tbody></table>`;
+  if (!isAdmin) document.querySelectorAll('#matList .adm').forEach(e => e.style.display = 'none');
+}
+function openMat() { $('m_title').value = ''; $('m_file').value = ''; $('m_cat').value = '인지교육교안'; $('mMat').classList.add('on'); }
+async function saveMat() {
+  const btn = $('matSave'); const f = $('m_file').files[0];
+  if (!$('m_title').value.trim() || !f) { toast('제목과 파일은 필수입니다'); return; }
+  btn.disabled = true; btn.textContent = '업로드 중...';
+  try {
+    const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
+    const path = `mat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const up = await db.storage.from('materials').upload(path, f);
+    if (up.error) throw up.error;
+    const { error } = await db.from('materials').insert({
+      category: $('m_cat').value, title: $('m_title').value.trim(), file_path: path, file_name: f.name });
+    if (error) throw error;
+    closeM('mMat'); toast('업로드되었습니다'); await load(); awView('mat');
+  } catch (e) { toast('업로드 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '업로드'; }
+}
+async function delMat(id) {
+  if (!confirm('이 자료를 삭제합니다.')) return;
+  const m = MAT.find(x => x.id === id);
+  const { error } = await db.from('materials').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (m) await db.storage.from('materials').remove([m.file_path]);
+  toast('삭제되었습니다'); load();
+}
+
 /* ---------- 인지교육 목록 ---------- */
 function renderAwList() {
   const rows = TR.filter(t => t.edu_type === '인지교육').sort((a, b) => a.edu_date.localeCompare(b.edu_date));
-  $('awListBody').innerHTML = rows.map((t, i) => `<tr>
-    <td>${i + 1}</td><td>${t.edu_date}</td><td class="muted">${esc(t.doc_no)}</td>
-    <td>${esc(t.title)}</td><td>${esc(t.place)}</td>
-    <td>${t.course_type ? `<span class="badge b-gray">${t.course_type}</span>` : '-'}</td>
-    <td>${AT.filter(a => a.training_id === t.id).length}</td>
-    <td>${pdfBadges(t)}</td>
-    <td class="adm">${admBtns(t)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">등록된 인지교육이 없습니다</td></tr>';
+  const nameOf = eid => { const e = EMP.find(x => x.id === eid); return e ? e.name : '?'; };
+  $('awListBody').innerHTML = rows.map((t, i) => {
+    const ats = AT.filter(a => a.training_id === t.id);
+    const names = ats.map(a => esc(nameOf(a.employee_id))).join(', ') || '<span class="muted">-</span>';
+    const scores = ats.map(a => a.score).filter(s => s != null);
+    const scoreTxt = scores.length ? scores.join(', ') : '-';
+    return `<tr>
+      <td>${i + 1}</td><td>${t.edu_date}</td><td>${names}</td>
+      <td>${esc(t.title)}</td><td>${esc(t.place)}</td><td>${esc(t.instructor)}</td>
+      <td>${t.course_type ? `<span class="badge b-gray">${t.course_type}</span>` : '-'}</td>
+      <td>${scoreTxt}</td>
+      <td>${pdfBadges(t)}</td>
+      <td class="adm">${admBtns(t)}</td></tr>`;
+  }).join('') || '<tr><td colspan="10" class="muted">등록된 인지교육이 없습니다</td></tr>';
   if (!isAdmin) document.querySelectorAll('#awListBody .adm').forEach(e => e.style.display = 'none');
 }
 
@@ -487,6 +563,37 @@ function renderCard() {
     .filter(x => x.t).sort((a, b) => b.t.edu_date.localeCompare(a.t.edu_date));
   const info = [['성명', e.name], ['직위', e.position], ['사번', e.emp_no], ['소속', e.department],
     ['입사일자', e.hire_date], ['담당업무', e.duty], ['근무상태', e.status]];
+
+  // 대분류 그룹: 보안지시 / 인지교육 / (기타의 category) — 사이트관리 교육 먼저, 그다음 기타
+  const groupKey = t => {
+    if (t.edu_type === '보안지시') return '보안지시';
+    if (t.edu_type === '인지교육') return '항공보안 인지교육';
+    return t.category || '기타';
+  };
+  const order = ['보안지시', '항공보안 인지교육'];
+  const groups = {};
+  rows.forEach(r => { const k = groupKey(r.t); (groups[k] = groups[k] || []).push(r); });
+  const keys = Object.keys(groups).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+
+  const tableFor = list => `<div class="scroll"><table><thead><tr>
+      <th style="width:92px">교육일자</th><th style="width:70px">이수</th><th>세부내용</th>
+      <th style="width:110px">장소</th><th style="width:100px">강사</th><th style="width:56px">점수</th><th style="width:60px">일지</th>
+    </tr></thead><tbody>${list.map(r => `<tr>
+      <td>${r.t.edu_date}</td>
+      <td>${r.t.course_type ? `<span class="badge b-gray">${r.t.course_type}</span>` : '-'}</td>
+      <td>${esc(r.t.note) || esc(r.t.title)}</td><td>${esc(r.t.place)}</td><td>${esc(r.t.instructor)}</td>
+      <td>${r.s ?? '-'}</td>
+      <td>${(() => { const a = attsOf(r.t.id).find(x => x.kind === '교육일지'); return a ? `<a class="badge b-ok" href="${pdfUrl(a.file_path)}" target="_blank">보기</a>` : '<span class="muted">-</span>'; })()}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+
+  const body = keys.length
+    ? keys.map(k => `<div class="sec"><h3>${esc(k)} <span class="muted">(${groups[k].length}건)</span></h3>${tableFor(groups[k])}</div>`).join('')
+    : '<div class="sec muted">교육 기록이 없습니다</div>';
+
   $('cardBox').innerHTML = `<div class="card">
     <div style="display:flex;gap:18px;align-items:flex-start">
       <img src="${e.photo_path ? photoUrl(e.photo_path) : NOPIC}" alt="증명사진"
@@ -495,16 +602,8 @@ function renderCard() {
         ${info.map(k => `<div><span class="muted">${k[0]}</span><div>${esc(k[1]) || '-'}</div></div>`).join('')}
       </div>
     </div>
-    <div class="sec"><h3>교육 기록 (${rows.length}건)</h3>
-    <div class="scroll"><table><thead><tr>
-      <th style="width:92px">교육일자</th><th style="width:90px">교육구분</th><th>교육내용</th>
-      <th style="width:110px">장소</th><th style="width:90px">강사</th><th style="width:60px">점수</th><th style="width:70px">일지</th>
-    </tr></thead><tbody>${rows.map(r => `<tr>
-      <td>${r.t.edu_date}</td><td><span class="badge b-gray">${r.t.edu_type}</span></td>
-      <td>${esc(r.t.title)}</td><td>${esc(r.t.place)}</td><td>${esc(r.t.instructor)}</td>
-      <td>${r.s ?? '-'}</td>
-      <td>${(() => { const a = attsOf(r.t.id).find(x => x.kind === '교육일지'); return a ? `<a class="badge b-ok" href="${pdfUrl(a.file_path)}" target="_blank">보기</a>` : '<span class="muted">-</span>'; })()}</td>
-    </tr>`).join('') || '<tr><td colspan="7" class="muted">교육 기록이 없습니다</td></tr>'}</tbody></table></div></div></div>`;
+    ${body}
+  </div>`;
 }
 
 /* ---------- 인원명부 ---------- */
@@ -553,10 +652,21 @@ function allAt(v) { document.querySelectorAll('.at').forEach(c => c.checked = v)
 function addV(d = {}) {
   const row = document.createElement('div');
   row.className = 'vrow';
-  row.innerHTML = `<input class="v_name" placeholder="업체명" value="${esc(d.vendor_name)}">
-    <input type="date" class="v_sent" title="전파일" value="${d.sent_date || ''}">
-    <input type="date" class="v_recv" title="일지수령일" value="${d.received_date || ''}">
-    <button class="mini" onclick="this.parentNode.remove()">삭제</button>`;
+  const cur = d.journal_pdf
+    ? `<a class="badge b-ok" href="${pdfUrl(d.journal_pdf)}" target="_blank">일지</a>`
+    : `<span class="muted" style="font-size:11px">일지 없음</span>`;
+  row.innerHTML = `
+    <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:6px;align-items:center">
+      <input class="v_name" placeholder="업체명" value="${esc(d.vendor_name)}">
+      <input type="date" class="v_sent" title="전파일" value="${d.sent_date || ''}">
+      <input type="date" class="v_recv" title="일지수령일" value="${d.received_date || ''}">
+      <button class="mini" onclick="this.closest('.vrow').remove()">삭제</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:4px;padding-left:2px">
+      <span class="muted" style="font-size:11px">협력업체 일지:</span>
+      ${cur}
+      <input type="file" class="v_file" accept="application/pdf,image/*" style="font-size:11px">
+    </div>`;
   row.dataset.pdf = d.journal_pdf || '';
   row.dataset.id = d.id || '';
   $('vList').appendChild(row);
@@ -675,13 +785,25 @@ async function saveEdu() {
     if (ats.length) { const { error } = await db.from('attendances').insert(ats); if (error) throw error; }
 
     await db.from('vendor_dispatches').delete().eq('training_id', tid);
-    const vs = [...$('vList').children].filter(r => r.querySelector('.v_name').value.trim()).map(r => ({
-      training_id: tid,
-      vendor_name: r.querySelector('.v_name').value.trim(),
-      sent_date: r.querySelector('.v_sent').value || null,
-      received_date: r.querySelector('.v_recv').value || null,
-      journal_pdf: r.dataset.pdf || null
-    }));
+    const vs = [];
+    for (const r of $('vList').children) {
+      const vname = r.querySelector('.v_name').value.trim();
+      if (!vname) continue;
+      let vpdf = r.dataset.pdf || null;
+      const vf = r.querySelector('.v_file').files[0];
+      if (vf) {
+        const path = await upload(vf, 'vendor');
+        if (!path) throw new Error(`협력업체 일지 업로드 실패: ${vf.name}`);
+        vpdf = path;
+      }
+      vs.push({
+        training_id: tid,
+        vendor_name: vname,
+        sent_date: r.querySelector('.v_sent').value || null,
+        received_date: r.querySelector('.v_recv').value || null,
+        journal_pdf: vpdf
+      });
+    }
     if (isSec && vs.length) { const { error } = await db.from('vendor_dispatches').insert(vs); if (error) throw error; }
 
     closeM('mEdu'); toast('저장되었습니다'); await load();
