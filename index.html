@@ -80,6 +80,13 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 .hubico{width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
 .hubcard .t{font-size:17px;font-weight:600;margin-bottom:6px}
 .hubcard .d{font-size:12.5px;color:var(--ink2);line-height:1.5}
+.orgwrap{overflow-x:auto;padding:6px 0}
+.orgchart{position:relative;width:860px;height:400px;margin:0 auto}
+.orgb{position:absolute;border:1.5px solid var(--navy);border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px 8px}
+.orgb .ot{font-size:12.5px;font-weight:600;line-height:1.28}
+.orgb .os{font-size:11px;color:var(--ink2);margin-top:2px;line-height:1.22}
+.orgb.hl{background:var(--navy-l)}
+@media(max-width:760px){.hubgrid{grid-template-columns:1fr !important}}
 @media(max-width:640px){.vrow{grid-template-columns:1fr}}
 </style>
 </head>
@@ -103,9 +110,9 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
     <button class="mini" onclick="logout()">잠금</button>
   </div>
 </div></header>
-<div class="wrap" style="max-width:620px">
+<div class="wrap" style="max-width:680px">
   <p class="muted" style="text-align:center;margin:44px 0 26px">관리할 업무를 선택하세요</p>
-  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+  <div class="grid hubgrid" style="grid-template-columns:repeat(2,1fr);gap:18px">
     <div class="hubcard" onclick="goEdu()">
       <div class="hubico" style="background:var(--navy-l)">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#123a63" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg>
@@ -119,6 +126,20 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
       </div>
       <div class="t">보안점검</div>
       <div class="d">서지청 · 국토부 등 점검 대응 자료실</div>
+    </div>
+    <div class="hubcard" onclick="goExtra()">
+      <div class="hubico" style="background:#eef0f3">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#5b6470" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a4 4 0 0 1 0 8"/><path d="M8 3a4 4 0 0 0 0 8"/><path d="M3 21v-1a5 5 0 0 1 5-5h0"/><path d="M21 21v-1a5 5 0 0 0-5-5h0"/><circle cx="12" cy="8" r="4"/><path d="M6 21v-1a6 6 0 0 1 12 0v1"/></svg>
+      </div>
+      <div class="t">보안 조직/연락망</div>
+      <div class="d">협력업체 보안담당자 연락처</div>
+    </div>
+    <div class="hubcard" onclick="goRel()">
+      <div class="hubico" style="background:var(--warn-bg)">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#854f0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+      </div>
+      <div class="t">보안 관련 사항</div>
+      <div class="d">기타 보안 관련 사항 · 자료</div>
     </div>
   </div>
 </div>
@@ -259,6 +280,169 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div id="inspBody"></div>
 </div>
 </div>
+
+<!-- 보안 조직/연락망 -->
+<div id="extra" class="hide">
+<header><div class="wrap">
+  <div><h1>보안 조직/연락망</h1><div class="sub">케이터링운영파트</div></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="mini" onclick="goHub()">← 홈</button>
+    <span id="extraRole" class="badge b-gray"></span>
+    <button class="mini" onclick="logout()">잠금</button>
+  </div>
+</div></header>
+<div class="wrap">
+  <div class="subnav" style="margin-top:16px">
+    <button id="ex-org" class="on" onclick="exView('org')">이스타항공 보안 조직</button>
+    <button id="ex-ct" onclick="exView('ct')">협력업체 보안담당자</button>
+  </div>
+
+  <div id="ex-ctv">
+    <h2 class="pt">협력업체 보안담당자 연락망 <span class="muted" id="ctCnt"></span>
+      <span class="tools">
+        <button onclick="exportCt()">엑셀(CSV)</button>
+        <button class="pri adm" onclick="openCt()">＋ 담당자 추가</button>
+      </span>
+    </h2>
+    <div class="card scroll"><table><thead><tr>
+      <th style="width:74px">구분</th><th style="width:150px">업체명</th><th style="width:210px">업체 소재지</th>
+      <th style="width:170px">보안담당자</th><th>납품방식</th><th style="width:90px" class="adm">관리</th>
+    </tr></thead><tbody id="ctBody"></tbody></table></div>
+  </div>
+
+  <div id="ex-orgv" class="hide">
+    <h2 class="pt">이스타항공 항공보안 조직도
+      <span class="tools">
+        <button class="adm" onclick="openOrg()">조직도 편집</button>
+      </span>
+    </h2>
+    <div class="card"><div class="orgwrap"><div class="orgchart" id="orgChart"></div></div></div>
+
+    <h2 class="pt" style="margin-top:26px">케이터링운영파트 보안 담당자 현황 <span class="muted" id="icCnt"></span>
+      <span class="tools">
+        <button onclick="exportIc()">엑셀(CSV)</button>
+        <button class="pri adm" onclick="openIc()">＋ 담당자 추가</button>
+      </span>
+    </h2>
+    <div class="card scroll"><table><thead><tr>
+      <th style="width:110px">구분</th><th style="width:80px">직급</th><th style="width:80px">성명</th>
+      <th style="width:120px">연락처</th><th>비고</th><th style="width:120px">인사발령</th><th style="width:90px" class="adm">관리</th>
+    </tr></thead><tbody id="icBody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- 조직도 편집 -->
+<div id="mOrg" class="modal"><div class="box" style="max-width:620px">
+  <h2 style="font-size:16px;margin-bottom:6px">조직도 편집</h2>
+  <p class="muted" style="margin-bottom:12px">각 박스의 문구를 수정합니다. 배치·연결선은 고정입니다.</p>
+  <div id="orgEdit"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mOrg')">취소</button>
+    <button class="pri" id="orgSave" onclick="saveOrg()">저장</button>
+  </div>
+</div></div>
+
+<!-- 보안 관련 사항 -->
+<div id="rel" class="hide">
+<header><div class="wrap">
+  <div><h1>보안 관련 사항</h1><div class="sub">케이터링운영파트</div></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="mini" onclick="goHub()">← 홈</button>
+    <span id="relRole" class="badge b-gray"></span>
+    <button class="mini" onclick="logout()">잠금</button>
+  </div>
+</div></header>
+<div class="wrap">
+  <h2 class="pt">보안 관련 사항 <span class="muted" id="snCnt"></span>
+    <span class="tools">
+      <button class="pri adm" onclick="openSn()">＋ 사항 추가</button>
+    </span>
+  </h2>
+  <div id="snBody"></div>
+</div>
+</div>
+
+<!-- 케이터링운영파트 보안 담당자 추가/수정 -->
+<div id="mIc" class="modal"><div class="box" style="max-width:480px">
+  <h2 style="font-size:16px;margin-bottom:14px" id="icTitle">담당자 추가</h2>
+  <input type="hidden" id="ic_id">
+  <div class="grid g2">
+    <div><label class="f">구분</label><input id="ic_div" placeholder="정/부 · 보안책임자 등"></div>
+    <div><label class="f">직급</label><input id="ic_rank"></div>
+    <div><label class="f">성명</label><input id="ic_name"></div>
+    <div><label class="f">연락처</label><input id="ic_phone" placeholder="010-0000-0000"></div>
+  </div>
+  <div style="margin-top:10px"><label class="f">비고</label><input id="ic_note"></div>
+  <div class="sec">
+    <h3>인사발령 첨부 <span class="muted">(사내 게시판 인사발령 HTML 등 · 여러 개 가능)</span></h3>
+    <div id="icAtNow"></div>
+    <div id="icAtNew"></div>
+    <button class="mini" onclick="addIcF()">＋ 파일 추가</button>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mIc')">취소</button>
+    <button class="pri" id="icSave" onclick="saveIc()">저장</button>
+  </div>
+</div></div>
+
+<!-- 협력업체 담당자 추가/수정 -->
+<div id="mCt" class="modal"><div class="box" style="max-width:520px">
+  <h2 style="font-size:16px;margin-bottom:14px" id="ctTitle">담당자 추가</h2>
+  <input type="hidden" id="c_id">
+  <div class="grid g2">
+    <div><label class="f">구분(공항)</label><input id="c_airport" placeholder="인천공항"></div>
+    <div><label class="f">업체명</label><input id="c_vendor"></div>
+  </div>
+  <div style="margin-top:10px"><label class="f">업체 소재지</label><input id="c_address"></div>
+  <div class="sec"><h3>정담당자</h3>
+    <div class="grid g2">
+      <div><label class="f">담당자</label><input id="c_person"></div>
+      <div><label class="f">직책</label><input id="c_pos" placeholder="매니저"></div>
+      <div><label class="f">연락처</label><input id="c_phone" placeholder="010-0000-0000"></div>
+      <div><label class="f">이메일</label><input id="c_email"></div>
+    </div>
+  </div>
+  <div class="sec"><h3>부담당자 <span class="muted">(선택)</span></h3>
+    <div class="grid g2">
+      <div><label class="f">담당자</label><input id="c_person2"></div>
+      <div><label class="f">직책</label><input id="c_pos2"></div>
+      <div><label class="f">연락처</label><input id="c_phone2"></div>
+      <div><label class="f">이메일</label><input id="c_email2"></div>
+    </div>
+  </div>
+  <div style="margin-top:10px"><label class="f">납품방식</label><textarea id="c_delivery" rows="2"></textarea></div>
+  <div style="margin-top:10px"><label class="f">비고</label><input id="c_note"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mCt')">취소</button>
+    <button class="pri" onclick="saveCt()">저장</button>
+  </div>
+</div></div>
+
+<!-- 기타 보안사항 추가/수정 -->
+<div id="mSn" class="modal"><div class="box" style="max-width:520px">
+  <h2 style="font-size:16px;margin-bottom:14px" id="snTitle">기타 보안사항</h2>
+  <input type="hidden" id="s_id">
+  <div><label class="f">제목 *</label><input id="s_title"></div>
+  <div style="margin-top:10px"><label class="f">메모 내용</label><textarea id="s_content" rows="4"></textarea></div>
+  <p class="muted" style="margin-top:8px">저장 후 목록에서 "＋첨부"로 파일을 여러 개 추가할 수 있습니다.</p>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mSn')">취소</button>
+    <button class="pri" id="snSave" onclick="saveSn()">저장</button>
+  </div>
+</div></div>
+
+<!-- 기타 보안사항 첨부 -->
+<div id="mSnFile" class="modal"><div class="box" style="max-width:480px">
+  <h2 style="font-size:16px;margin-bottom:14px">첨부 추가</h2>
+  <input type="hidden" id="sf_note">
+  <div><label class="f">첨부 이름 *</label><input id="sf_name" placeholder="예: 보안점검 결과 공문"></div>
+  <div style="margin-top:10px"><label class="f">파일 * (PDF/이미지/문서)</label><input type="file" id="sf_file"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mSnFile')">취소</button>
+    <button class="pri" id="snFileSave" onclick="saveSnFile()">업로드</button>
+  </div>
+</div></div>
 
 <!-- 점검 항목 추가/수정 -->
 <div id="mInspItem" class="modal"><div class="box" style="max-width:560px">
@@ -414,14 +598,24 @@ async function logout() { await db.auth.signOut(); location.reload(); }
 function start() {
   $('gate').classList.add('hide');
   const rt = isAdmin ? '관리자' : '열람';
-  $('role').textContent = rt; $('hubRole').textContent = rt; $('inspRole').textContent = rt;
+  $('role').textContent = rt; $('hubRole').textContent = rt; $('inspRole').textContent = rt; $('extraRole').textContent = rt; $('relRole').textContent = rt;
   document.querySelectorAll('.adm').forEach(e => { if (!isAdmin) e.style.display = 'none'; });
   goHub();
-  load(); loadInsp();
+  load(); loadInsp(); loadExtra();
 }
-function goHub() { $('hub').classList.remove('hide'); $('app').classList.add('hide'); $('insp').classList.add('hide'); }
-function goEdu() { $('hub').classList.add('hide'); $('app').classList.remove('hide'); $('insp').classList.add('hide'); }
-function goInsp() { $('hub').classList.add('hide'); $('app').classList.add('hide'); $('insp').classList.remove('hide'); renderInsp(); }
+const VIEWS = ['hub', 'app', 'insp', 'extra', 'rel'];
+function showView(v) { VIEWS.forEach(k => $(k).classList.toggle('hide', k !== v)); }
+function goHub() { showView('hub'); }
+function goEdu() { showView('app'); }
+function goInsp() { showView('insp'); renderInsp(); }
+function goExtra() { showView('extra'); exView('org'); renderCt(); renderOrg(); renderIc(); }
+function exView(v) {
+  $('ex-ctv').classList.toggle('hide', v !== 'ct');
+  $('ex-orgv').classList.toggle('hide', v !== 'org');
+  $('ex-ct').classList.toggle('on', v === 'ct');
+  $('ex-org').classList.toggle('on', v === 'org');
+}
+function goRel() { showView('rel'); renderSn(); }
 
 async function load() {
   const [e, t, a, v, f, m] = await Promise.all([
@@ -673,7 +867,7 @@ function renderCard() {
     </tr></thead><tbody>${list.map(r => `<tr>
       <td>${r.t.edu_date}</td>
       <td>${r.t.course_type ? `<span class="badge b-gray">${r.t.course_type}</span>` : '-'}</td>
-      <td>${esc(r.t.note) || esc(r.t.title)}</td><td>${esc(r.t.place)}</td><td>${esc(r.t.instructor)}</td>
+      <td style="white-space:pre-wrap">${esc(r.t.note) || esc(r.t.title)}</td><td>${esc(r.t.place)}</td><td>${esc(r.t.instructor)}</td>
       <td>${r.s ?? '-'}</td>
       <td>${(() => { const a = attsOf(r.t.id).find(x => x.kind === '교육일지'); return a ? `<a class="badge b-ok" href="${pdfUrl(a.file_path)}" target="_blank">보기</a>` : '<span class="muted">-</span>'; })()}</td>
     </tr>`).join('')}</tbody></table></div>`;
@@ -983,9 +1177,19 @@ async function loadInsp() {
   IFILE = fi.error ? [] : (fi.data || []);
   renderInsp();
 }
+function seqKey(s) { return (s || '').trim().split(/[-.]/).map(x => { const n = parseInt(x, 10); return isNaN(n) ? -1 : n; }); }
+function seqCmp(a, b) {
+  const ka = seqKey(a.seq), kb = seqKey(b.seq);
+  for (let i = 0; i < Math.max(ka.length, kb.length); i++) {
+    const d = (ka[i] ?? 0) - (kb[i] ?? 0);
+    if (d) return d;
+  }
+  return a.id - b.id;
+}
 function renderInsp() {
-  $('inspCnt').textContent = `총 ${IITEM.length}개 항목`;
-  $('inspBody').innerHTML = IITEM.map(m => {
+  const items = [...IITEM].sort(seqCmp);
+  $('inspCnt').textContent = `총 ${items.length}개 항목`;
+  $('inspBody').innerHTML = items.map(m => {
     const files = IFILE.filter(f => f.item_id === m.id);
     const atts = files.length
       ? files.map((f, i) => `<div class="frow" style="grid-template-columns:1fr auto">
@@ -1066,6 +1270,337 @@ async function delInspFile(id) {
   if (error) { toast('삭제 실패: ' + error.message); return; }
   if (f && f.file_path) await db.storage.from(IBUCKET).remove([f.file_path]);
   toast('삭제되었습니다'); loadInsp();
+}
+
+/* ---------- 보안 연락망·기타 ---------- */
+let CT = [], SN = [], IC = [], ORG = {};
+/* 조직도 박스 좌표(고정) */
+const ORG_POS = {
+  ceo:    { l: 135, t: 12,  w: 200, h: 44 },
+  chief:  { l: 135, t: 76,  w: 200, h: 54 },
+  super:  { l: 135, t: 150, w: 200, h: 54 },
+  mgrL:   { l: 20,  t: 234, w: 210, h: 58 },
+  mgrR:   { l: 270, t: 234, w: 230, h: 58 },
+  staffL: { l: 20,  t: 326, w: 210, h: 54 },
+  staffR: { l: 280, t: 326, w: 210, h: 54 },
+  council:{ l: 620, t: 212, w: 220, h: 84, hl: 1 }
+};
+const ORG_SLOTS = ['ceo', 'chief', 'super', 'mgrL', 'mgrR', 'staffL', 'staffR', 'council'];
+let SNF = [], ICF = [];
+async function loadExtra() {
+  const [c, s, ic, ob, sf, icf] = await Promise.all([
+    db.from('security_contacts').select('*').order('sort_order').order('id'),
+    db.from('security_notes').select('*').order('created_at', { ascending: false }),
+    db.from('internal_contacts').select('*').order('sort_order').order('id'),
+    db.from('org_boxes').select('*'),
+    db.from('security_note_files').select('*').order('id'),
+    db.from('internal_contact_files').select('*').order('id')
+  ]);
+  CT = c.error ? [] : (c.data || []);
+  SN = s.error ? [] : (s.data || []);
+  IC = ic.error ? [] : (ic.data || []);
+  SNF = sf.error ? [] : (sf.data || []);
+  ICF = icf.error ? [] : (icf.data || []);
+  ORG = {};
+  if (!ob.error) (ob.data || []).forEach(b => ORG[b.slot] = b);
+  renderCt(); renderSn(); renderOrg(); renderIc();
+}
+/* 조직도 (고정 배치 + 텍스트 DB) */
+function renderOrg() {
+  const line = (x1, y1, x2, y2, dash) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#5b6470" stroke-width="1.5"${dash ? ' stroke-dasharray="5 4"' : ''}${dash === 'arrow' ? ' marker-end="url(#oarr)"' : ''}/>`;
+  const svg = `<svg width="860" height="400" style="position:absolute;left:0;top:0" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="oarr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5b6470"/></marker></defs>
+    ${line(235, 56, 235, 76)}
+    ${line(235, 130, 235, 150)}
+    ${line(235, 204, 235, 218)}${line(125, 218, 385, 218)}${line(125, 218, 125, 234)}${line(385, 218, 385, 234)}
+    ${line(125, 292, 125, 326, true)}
+    ${line(385, 292, 385, 326, true)}
+    ${line(335, 34, 730, 34, true)}${line(730, 34, 730, 212, true)}
+    ${line(500, 263, 616, 254, 'arrow')}
+  </svg>`;
+  const boxes = ORG_SLOTS.map(slot => {
+    const p = ORG_POS[slot], b = ORG[slot] || {};
+    return `<div class="orgb${p.hl ? ' hl' : ''}" style="left:${p.l}px;top:${p.t}px;width:${p.w}px;height:${p.h}px">
+      <div class="ot">${esc(b.title) || ''}</div>${b.subtitle ? `<div class="os">${esc(b.subtitle)}</div>` : ''}</div>`;
+  }).join('');
+  $('orgChart').innerHTML = svg + boxes;
+}
+function openOrg() {
+  $('orgEdit').innerHTML = ORG_SLOTS.map(slot => {
+    const b = ORG[slot] || {};
+    return `<div class="vrow"><div class="grid g2">
+      <div><label class="f">제목</label><input id="ob_${slot}_t" value="${esc(b.title)}"></div>
+      <div><label class="f">부제(선택)</label><input id="ob_${slot}_s" value="${esc(b.subtitle)}"></div>
+    </div></div>`;
+  }).join('');
+  $('mOrg').classList.add('on');
+}
+async function saveOrg() {
+  const btn = $('orgSave'); btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    const rows = ORG_SLOTS.map((slot, i) => ({
+      slot, title: $(`ob_${slot}_t`).value.trim() || null,
+      subtitle: $(`ob_${slot}_s`).value.trim() || null, sort: (i + 1) * 10
+    }));
+    const { error } = await db.from('org_boxes').upsert(rows, { onConflict: 'slot' });
+    if (error) throw error;
+    closeM('mOrg'); toast('저장되었습니다'); await loadExtra();
+  } catch (e) { toast('저장 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
+}
+/* 케이터링운영파트 보안 담당자 현황 */
+function renderIc() {
+  $('icCnt').textContent = `총 ${IC.length}명`;
+  $('icBody').innerHTML = IC.map(c => {
+    const files = ICF.filter(f => f.contact_id === c.id);
+    const hr = files.length
+      ? files.map((f, i) => `<a class="badge b-ok" href="${inspUrl(f.file_path)}" target="_blank" title="${esc(f.file_name || '')}">발령${files.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' ')
+      : '<span class="muted">-</span>';
+    return `<tr>
+    <td>${esc(c.division) || '-'}</td><td>${esc(c.rank) || '-'}</td><td>${esc(c.name) || '-'}</td>
+    <td>${esc(c.phone) || '-'}</td><td>${esc(c.note) || '-'}</td><td>${hr}</td>
+    <td class="adm"><button class="mini" onclick="openIc(${c.id})">수정</button><button class="mini" onclick="delIc(${c.id})">삭제</button></td>
+  </tr>`; }).join('') || '<tr><td colspan="7" class="muted">등록된 담당자가 없습니다</td></tr>';
+  if (!isAdmin) document.querySelectorAll('#icBody .adm').forEach(e => e.style.display = 'none');
+}
+function icNowF(list) {
+  $('icAtNow').innerHTML = list.map(a => `<div class="frow" data-id="${a.id}">
+    <span class="badge b-ok">발령</span>
+    <a class="nm" href="${inspUrl(a.file_path)}" target="_blank">${esc(a.file_name || a.file_path)}</a>
+    <button class="mini" onclick="delIcF(${a.id})">삭제</button>
+  </div>`).join('');
+}
+function addIcF() {
+  const row = document.createElement('div');
+  row.className = 'frow';
+  row.style.gridTemplateColumns = '1fr auto';
+  row.innerHTML = `<input type="file" class="icf_file">
+    <button class="mini" onclick="this.parentNode.remove()">삭제</button>`;
+  $('icAtNew').appendChild(row);
+}
+async function delIcF(id) {
+  if (!confirm('이 인사발령 첨부를 삭제합니다.')) return;
+  const a = ICF.find(x => x.id === id);
+  const { error } = await db.from('internal_contact_files').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (a && a.file_path) await db.storage.from(IBUCKET).remove([a.file_path]);
+  ICF = ICF.filter(x => x.id !== id);
+  icNowF(ICF.filter(x => x.contact_id === +$('ic_id').value));
+  toast('첨부가 삭제되었습니다'); renderIc();
+}
+function openIc(id) {
+  const c = id ? IC.find(x => x.id === id) : null;
+  $('ic_id').value = c?.id || '';
+  $('ic_div').value = c?.division || ''; $('ic_rank').value = c?.rank || '';
+  $('ic_name').value = c?.name || ''; $('ic_phone').value = c?.phone || ''; $('ic_note').value = c?.note || '';
+  $('icAtNew').innerHTML = '';
+  icNowF(c ? ICF.filter(f => f.contact_id === c.id) : []);
+  $('icTitle').textContent = c ? '담당자 수정' : '담당자 추가';
+  $('mIc').classList.add('on');
+}
+async function saveIc() {
+  const btn = $('icSave'); btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    const id = $('ic_id').value ? +$('ic_id').value : null;
+    const row = {
+      division: $('ic_div').value.trim() || null, rank: $('ic_rank').value.trim() || null,
+      name: $('ic_name').value.trim() || null, phone: $('ic_phone').value.trim() || null,
+      note: $('ic_note').value.trim() || null
+    };
+    if (!row.name && !row.division) { toast('구분 또는 성명은 입력하세요'); return; }
+    let cid = id;
+    if (id) {
+      const { error } = await db.from('internal_contacts').update(row).eq('id', id);
+      if (error) throw error;
+    } else {
+      row.sort_order = IC.reduce((a, b) => Math.max(a, b.sort_order || 0), 0) + 10;
+      const { data, error } = await db.from('internal_contacts').insert(row).select().single();
+      if (error) throw error;
+      cid = data.id;
+    }
+    const files = [];
+    for (const r of $('icAtNew').children) {
+      const f = r.querySelector('.icf_file').files[0];
+      if (!f) continue;
+      const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
+      const path = `hr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+      const up = await db.storage.from(IBUCKET).upload(path, f);
+      if (up.error) throw up.error;
+      files.push({ contact_id: cid, file_path: path, file_name: f.name });
+    }
+    if (files.length) { const { error } = await db.from('internal_contact_files').insert(files); if (error) throw error; }
+    closeM('mIc'); toast('저장되었습니다'); await loadExtra();
+  } catch (e) { toast('저장 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
+}
+async function delIc(id) {
+  const n = ICF.filter(f => f.contact_id === id).length;
+  if (!confirm(`이 담당자를 삭제합니다.${n ? `\n인사발령 첨부 ${n}건도 함께 삭제됩니다.` : ''}`)) return;
+  const paths = ICF.filter(f => f.contact_id === id).map(f => f.file_path);
+  const { error } = await db.from('internal_contacts').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (paths.length) await db.storage.from(IBUCKET).remove(paths);
+  toast('삭제되었습니다'); loadExtra();
+}
+function exportIc() {
+  dl('케이터링운영파트_보안담당자', [['구분', '직급', '성명', '연락처', '비고'],
+    ...IC.map(c => [c.division, c.rank, c.name, c.phone, c.note])]);
+}
+/* 협력업체 연락망 */
+function renderCt() {
+  $('ctCnt').textContent = `총 ${CT.length}곳`;
+  const line = (nm, pos, ph, em) => [
+    (esc(nm) || '') + (pos ? ' ' + esc(pos) : ''),
+    ph ? `<span class="muted">${esc(ph)}</span>` : '',
+    em ? `<a href="mailto:${esc(em)}">${esc(em)}</a>` : ''
+  ].filter(Boolean).join('<br>');
+  $('ctBody').innerHTML = CT.map(c => {
+    const c1 = line(c.person, c.position, c.phone, c.email);
+    const c2 = line(c.person2, c.position2, c.phone2, c.email2);
+    const p = c2
+      ? `<div><span class="badge b-gray">정</span> ${c1 || '-'}</div><div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)"><span class="badge b-gray">부</span> ${c2}</div>`
+      : (c1 || '-');
+    return `<tr>
+    <td>${esc(c.airport) || '-'}</td><td>${esc(c.vendor_name) || '-'}</td>
+    <td style="font-size:12.5px">${esc(c.address) || '-'}</td>
+    <td style="font-size:12.5px">${p}</td>
+    <td style="font-size:12.5px;white-space:pre-wrap">${esc(c.delivery) || '-'}</td>
+    <td class="adm"><button class="mini" onclick="openCt(${c.id})">수정</button><button class="mini" onclick="delCt(${c.id})">삭제</button></td>
+  </tr>`; }).join('') || '<tr><td colspan="6" class="muted">등록된 담당자가 없습니다</td></tr>';
+  if (!isAdmin) document.querySelectorAll('#ctBody .adm').forEach(e => e.style.display = 'none');
+}
+function openCt(id) {
+  const c = id ? CT.find(x => x.id === id) : null;
+  $('c_id').value = c?.id || '';
+  $('c_airport').value = c?.airport || ''; $('c_vendor').value = c?.vendor_name || '';
+  $('c_address').value = c?.address || ''; $('c_person').value = c?.person || '';
+  $('c_pos').value = c?.position || ''; $('c_phone').value = c?.phone || '';
+  $('c_email').value = c?.email || '';
+  $('c_person2').value = c?.person2 || ''; $('c_pos2').value = c?.position2 || '';
+  $('c_phone2').value = c?.phone2 || ''; $('c_email2').value = c?.email2 || '';
+  $('c_delivery').value = c?.delivery || ''; $('c_note').value = c?.note || '';
+  $('ctTitle').textContent = c ? '담당자 수정' : '담당자 추가';
+  $('mCt').classList.add('on');
+}
+async function saveCt() {
+  const id = $('c_id').value ? +$('c_id').value : null;
+  const row = {
+    airport: $('c_airport').value.trim() || null, vendor_name: $('c_vendor').value.trim() || null,
+    address: $('c_address').value.trim() || null, person: $('c_person').value.trim() || null,
+    position: $('c_pos').value.trim() || null, phone: $('c_phone').value.trim() || null,
+    email: $('c_email').value.trim() || null,
+    person2: $('c_person2').value.trim() || null, position2: $('c_pos2').value.trim() || null,
+    phone2: $('c_phone2').value.trim() || null, email2: $('c_email2').value.trim() || null,
+    delivery: $('c_delivery').value.trim() || null, note: $('c_note').value.trim() || null
+  };
+  if (!row.vendor_name && !row.person && !row.airport) { toast('구분·업체명·담당자 중 하나는 입력하세요'); return; }
+  let error;
+  if (id) { ({ error } = await db.from('security_contacts').update(row).eq('id', id)); }
+  else {
+    row.sort_order = CT.reduce((a, b) => Math.max(a, b.sort_order || 0), 0) + 10;
+    ({ error } = await db.from('security_contacts').insert(row));
+  }
+  if (error) { toast('저장 실패: ' + error.message); return; }
+  closeM('mCt'); toast('저장되었습니다'); loadExtra();
+}
+async function delCt(id) {
+  if (!confirm('이 담당자를 삭제합니다.')) return;
+  const { error } = await db.from('security_contacts').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  toast('삭제되었습니다'); loadExtra();
+}
+function exportCt() {
+  dl('보안담당자_연락망', [['구분', '업체명', '업체 소재지', '정담당자', '직책', '연락처', '이메일', '부담당자', '직책', '연락처', '이메일', '납품방식', '비고'],
+    ...CT.map(c => [c.airport, c.vendor_name, c.address, c.person, c.position, c.phone, c.email, c.person2, c.position2, c.phone2, c.email2, c.delivery, c.note])]);
+}
+/* 기타 보안사항 */
+function renderSn() {
+  $('snCnt').textContent = `총 ${SN.length}건`;
+  $('snBody').innerHTML = SN.map(s => {
+    const files = SNF.filter(f => f.note_id === s.id);
+    const legacy = s.file_path ? `<div class="frow" style="grid-template-columns:1fr"><a class="nm" href="${inspUrl(s.file_path)}" target="_blank">첨부 · ${esc(s.file_name || '파일')}</a></div>` : '';
+    const atts = (files.length || s.file_path)
+      ? legacy + files.map((f, i) => `<div class="frow" style="grid-template-columns:1fr auto">
+          <a class="nm" href="${inspUrl(f.file_path)}" target="_blank">첨부 ${i + 1}. ${esc(f.display_name || f.file_name)}</a>
+          <button class="mini adm" onclick="delSnFile(${f.id})">삭제</button>
+        </div>`).join('')
+      : '<p class="muted" style="font-size:12.5px;margin-top:2px">첨부 없음</p>';
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;font-size:14.5px"><b>${esc(s.title)}</b></div>
+        <span class="tools adm" style="margin:0;flex-shrink:0">
+          <button class="mini pri" onclick="openSnFile(${s.id})">＋첨부</button>
+          <button class="mini" onclick="openSn(${s.id})">수정</button>
+          <button class="mini" onclick="delSn(${s.id})">삭제</button>
+        </span>
+      </div>
+      ${s.content ? `<div style="margin-top:8px;font-size:13px;white-space:pre-wrap">${esc(s.content)}</div>` : ''}
+      <div style="margin-top:8px">${atts}</div>
+    </div>`;
+  }).join('') || '<div class="card muted">등록된 사항이 없습니다</div>';
+  if (!isAdmin) document.querySelectorAll('#snBody .adm').forEach(e => e.style.display = 'none');
+}
+function openSn(id) {
+  const s = id ? SN.find(x => x.id === id) : null;
+  $('s_id').value = s?.id || '';
+  $('s_title').value = s?.title || ''; $('s_content').value = s?.content || '';
+  $('snTitle').textContent = s ? '기타 보안사항 수정' : '기타 보안사항';
+  $('mSn').classList.add('on');
+}
+async function saveSn() {
+  const btn = $('snSave');
+  if (!$('s_title').value.trim()) { toast('제목은 필수입니다'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    const id = $('s_id').value ? +$('s_id').value : null;
+    const row = { title: $('s_title').value.trim(), content: $('s_content').value.trim() || null };
+    let error;
+    if (id) { ({ error } = await db.from('security_notes').update(row).eq('id', id)); }
+    else { ({ error } = await db.from('security_notes').insert(row)); }
+    if (error) throw error;
+    closeM('mSn'); toast('저장되었습니다'); await loadExtra();
+  } catch (e) { toast('저장 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
+}
+async function delSn(id) {
+  const n = SNF.filter(f => f.note_id === id).length;
+  if (!confirm(`이 사항을 삭제합니다.${n ? `\n첨부 ${n}건도 함께 삭제됩니다.` : ''}`)) return;
+  const s = SN.find(x => x.id === id);
+  const paths = SNF.filter(f => f.note_id === id).map(f => f.file_path);
+  if (s && s.file_path) paths.push(s.file_path);
+  const { error } = await db.from('security_notes').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (paths.length) await db.storage.from(IBUCKET).remove(paths);
+  toast('삭제되었습니다'); loadExtra();
+}
+function openSnFile(noteId) {
+  $('sf_note').value = noteId; $('sf_name').value = ''; $('sf_file').value = '';
+  $('mSnFile').classList.add('on');
+}
+async function saveSnFile() {
+  const btn = $('snFileSave'); const f = $('sf_file').files[0];
+  if (!$('sf_name').value.trim() || !f) { toast('첨부 이름과 파일은 필수입니다'); return; }
+  btn.disabled = true; btn.textContent = '업로드 중...';
+  try {
+    const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
+    const path = `etc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const up = await db.storage.from(IBUCKET).upload(path, f);
+    if (up.error) throw up.error;
+    const { error } = await db.from('security_note_files').insert({
+      note_id: +$('sf_note').value, display_name: $('sf_name').value.trim(),
+      file_path: path, file_name: f.name });
+    if (error) throw error;
+    closeM('mSnFile'); toast('첨부되었습니다'); await loadExtra();
+  } catch (e) { toast('업로드 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '업로드'; }
+}
+async function delSnFile(id) {
+  if (!confirm('이 첨부를 삭제합니다.')) return;
+  const f = SNF.find(x => x.id === id);
+  const { error } = await db.from('security_note_files').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (f && f.file_path) await db.storage.from(IBUCKET).remove([f.file_path]);
+  toast('삭제되었습니다'); loadExtra();
 }
 
 /* ---------- CSV ---------- */
