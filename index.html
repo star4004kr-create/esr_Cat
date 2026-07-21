@@ -237,6 +237,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <h2 class="pt">개인 교육기록 카드
     <span class="tools">
       <select id="cardSel" style="width:190px" onchange="renderCard()"></select>
+      <button class="pri adm" onclick="openEtc()">＋ 기타 교육 추가</button>
       <button onclick="printCard()">PDF 저장</button>
       <button onclick="exportCsv('card')">엑셀(CSV)</button>
     </span>
@@ -562,6 +563,49 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
     <button onclick="closeM('mMat')">취소</button>
     <button class="pri" id="matSave" onclick="saveMat()">업로드</button>
+  </div>
+</div></div>
+
+<!-- 기타 교육 추가 (안전SMS·품질 등, 개인기록카드용) -->
+<div id="mEtc" class="modal"><div class="box" style="max-width:620px">
+  <h2 style="font-size:16px;margin-bottom:14px">기타 교육 추가 <span class="muted">(개인기록카드에만 표시)</span></h2>
+  <div class="grid g2">
+    <div><label class="f">대분류 *</label><input id="et_cat" list="etCatList" placeholder="안전(SMS) / 품질 / 산업안전 등"><datalist id="etCatList"></datalist></div>
+    <div><label class="f">교육일자 *</label><input type="date" id="et_date"></div>
+    <div><label class="f">교육장소</label><input id="et_place"></div>
+    <div><label class="f">강사</label><input id="et_inst"></div>
+    <div><label class="f">점수(선택)</label><input type="number" id="et_score"></div>
+  </div>
+  <div style="margin-top:10px"><label class="f">세부내용(제목) *</label><input id="et_title"></div>
+  <div class="sec">
+    <h3>대상자 <span class="muted" id="etCnt"></span>
+      <button class="mini" style="margin-left:8px" onclick="allEt(true)">전체선택</button>
+      <button class="mini" onclick="allEt(false)">해제</button>
+    </h3>
+    <div class="grid g2" id="etList"></div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mEtc')">취소</button>
+    <button class="pri" id="etSave" onclick="saveEtc()">저장</button>
+  </div>
+</div></div>
+
+<!-- 기타 교육 수정 (인원별) -->
+<div id="mEtcE" class="modal"><div class="box" style="max-width:520px">
+  <h2 style="font-size:16px;margin-bottom:14px">기타 교육 수정</h2>
+  <input type="hidden" id="ee_tid"><input type="hidden" id="ee_eid">
+  <div class="grid g2">
+    <div><label class="f">대분류 *</label><input id="ee_cat" list="etCatList"></div>
+    <div><label class="f">교육일자 *</label><input type="date" id="ee_date"></div>
+    <div><label class="f">교육장소</label><input id="ee_place"></div>
+    <div><label class="f">강사</label><input id="ee_inst"></div>
+    <div><label class="f">점수(이 인원)</label><input type="number" id="ee_score"></div>
+  </div>
+  <div style="margin-top:10px"><label class="f">세부내용(제목) *</label><input id="ee_title"></div>
+  <p class="muted" style="margin-top:8px">여러 명이 함께 등록된 교육이면 대분류·일자·내용·장소·강사 변경은 전원에게 반영됩니다. 점수는 이 인원만.</p>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+    <button onclick="closeM('mEtcE')">취소</button>
+    <button class="pri" id="eeSave" onclick="saveEtcE()">저장</button>
   </div>
 </div></div>
 
@@ -932,19 +976,20 @@ function renderCard() {
     return a.localeCompare(b);
   });
 
-  const tableFor = list => `<div class="scroll"><table><thead><tr>
+  const tableFor = (list, editable) => `<div class="scroll"><table><thead><tr>
       <th style="width:92px">교육일자</th><th style="width:70px">이수</th><th>세부내용</th>
-      <th style="width:110px">장소</th><th style="width:100px">강사</th><th style="width:56px">점수</th><th style="width:60px">일지</th>
+      <th style="width:110px">장소</th><th style="width:100px">강사</th><th style="width:56px">점수</th><th style="width:60px">일지</th>${editable ? '<th style="width:96px" class="adm">관리</th>' : ''}
     </tr></thead><tbody>${list.map(r => `<tr>
       <td>${r.t.edu_date}</td>
       <td>${r.t.course_type ? `<span class="badge b-gray">${r.t.course_type}</span>` : '-'}</td>
       <td style="white-space:pre-wrap">${esc(r.t.note) || esc(r.t.title)}</td><td>${esc(r.t.place)}</td><td>${esc(r.t.instructor)}</td>
       <td>${r.s ?? '-'}</td>
-      <td>${(() => { const a = attsOf(r.t.id).find(x => x.kind === '교육일지'); return a ? `<a class="badge b-ok" href="${pdfUrl(a.file_path)}" target="_blank">보기</a>` : '<span class="muted">-</span>'; })()}</td>
+      <td>${(() => { const a = attsOf(r.t.id).find(x => x.kind === '교육일지'); return a ? `<a class="badge b-ok" href="${pdfUrl(a.file_path)}" target="_blank">보기</a>` : '<span class="muted">-</span>'; })()}</td>${editable ? `<td class="adm"><button class="mini" onclick="editEtc(${r.t.id},${id})">수정</button><button class="mini" onclick="delEtcOne(${r.t.id},${id})">삭제</button></td>` : ''}
     </tr>`).join('')}</tbody></table></div>`;
 
+  const editableKey = k => k !== '보안지시' && k !== '항공보안 인지교육';
   const body = keys.length
-    ? keys.map(k => `<div class="sec"><h3>${esc(k)} <span class="muted">(${groups[k].length}건)</span></h3>${tableFor(groups[k])}</div>`).join('')
+    ? keys.map(k => `<div class="sec"><h3>${esc(k)} <span class="muted">(${groups[k].length}건)</span></h3>${tableFor(groups[k], editableKey(k))}</div>`).join('')
     : '<div class="sec muted">교육 기록이 없습니다</div>';
 
   $('cardBox').innerHTML = `<div class="card">
@@ -957,6 +1002,85 @@ function renderCard() {
     </div>
     ${body}
   </div>`;
+  if (!isAdmin) $('cardBox').querySelectorAll('.adm').forEach(el => el.style.display = 'none');
+}
+
+/* ---------- 기타 교육 추가 (개인기록카드) ---------- */
+function openEtc() {
+  const cats = [...new Set(TR.filter(t => t.edu_type === '기타').map(t => t.category).filter(Boolean))].sort();
+  $('etCatList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+  $('et_cat').value = ''; $('et_date').value = new Date().toISOString().slice(0, 10);
+  $('et_title').value = ''; $('et_place').value = ''; $('et_inst').value = ''; $('et_score').value = '';
+  const curId = +$('cardSel').value;
+  $('etList').innerHTML = EMP.filter(e => e.status === '재직' || e.status === '휴직').map(e =>
+    `<label class="chk ${e.status === '휴직' ? 'off' : ''}">
+      <input type="checkbox" class="et" value="${e.id}" ${e.id === curId ? 'checked' : ''} onchange="etCnt()">
+      ${esc(e.position)} · ${esc(e.name)}${e.status === '휴직' ? ' (휴직)' : ''}
+    </label>`).join('');
+  etCnt();
+  $('mEtc').classList.add('on');
+}
+function etCnt() { $('etCnt').textContent = `${document.querySelectorAll('.et:checked').length}명 선택`; }
+function allEt(v) { document.querySelectorAll('.et').forEach(c => c.checked = v); etCnt(); }
+function editEtc(tid, eid) {
+  const t = TR.find(x => x.id === tid);
+  const a = AT.find(x => x.training_id === tid && x.employee_id === eid);
+  if (!t) return;
+  const cats = [...new Set(TR.filter(x => x.edu_type === '기타').map(x => x.category).filter(Boolean))].sort();
+  $('etCatList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+  $('ee_tid').value = tid; $('ee_eid').value = eid;
+  $('ee_cat').value = t.category || ''; $('ee_date').value = t.edu_date || '';
+  $('ee_place').value = t.place || ''; $('ee_inst').value = t.instructor || '';
+  $('ee_title').value = t.note || t.title || ''; $('ee_score').value = a?.score ?? '';
+  $('mEtcE').classList.add('on');
+}
+async function saveEtcE() {
+  const btn = $('eeSave');
+  const tid = +$('ee_tid').value, eid = +$('ee_eid').value;
+  const cat = $('ee_cat').value.trim(), title = $('ee_title').value.trim(), date = $('ee_date').value;
+  if (!cat || !title || !date) { toast('대분류·세부내용·교육일자는 필수입니다'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    const { error } = await db.from('trainings').update({
+      category: cat, title, edu_date: date,
+      place: $('ee_place').value.trim() || null, instructor: $('ee_inst').value.trim() || null
+    }).eq('id', tid);
+    if (error) throw error;
+    const sc = $('ee_score').value ? +$('ee_score').value : null;
+    const { error: e2 } = await db.from('attendances').update({ score: sc }).eq('training_id', tid).eq('employee_id', eid);
+    if (e2) throw e2;
+    closeM('mEtcE'); toast('수정되었습니다'); await load();
+  } catch (e) { toast('저장 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
+}
+async function delEtcOne(tid, eid) {
+  if (!confirm('이 인원의 해당 기타 교육 기록을 삭제합니다.')) return;
+  const remain = AT.filter(a => a.training_id === tid && a.employee_id !== eid).length;
+  const { error } = await db.from('attendances').delete().eq('training_id', tid).eq('employee_id', eid);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  if (remain === 0) await db.from('trainings').delete().eq('id', tid);   // 마지막 대상자면 교육 자체 삭제
+  toast('삭제되었습니다'); await load();
+}
+async function saveEtc() {
+  const btn = $('etSave');
+  const cat = $('et_cat').value.trim(), title = $('et_title').value.trim(), date = $('et_date').value;
+  const ids = [...document.querySelectorAll('.et:checked')].map(c => +c.value);
+  if (!cat || !title || !date) { toast('대분류·세부내용·교육일자는 필수입니다'); return; }
+  if (!ids.length) { toast('대상자를 한 명 이상 선택하세요'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    const { data, error } = await db.from('trainings').insert({
+      edu_type: '기타', category: cat, title, edu_date: date,
+      place: $('et_place').value.trim() || null, instructor: $('et_inst').value.trim() || null
+    }).select().single();
+    if (error) throw error;
+    const sc = $('et_score').value ? +$('et_score').value : null;
+    const ats = ids.map(id => ({ training_id: data.id, employee_id: id, score: sc }));
+    const { error: e2 } = await db.from('attendances').insert(ats);
+    if (e2) throw e2;
+    closeM('mEtc'); toast(`기타 교육이 ${ids.length}명에게 추가되었습니다`); await load();
+  } catch (e) { toast('저장 실패: ' + (e.message || e)); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
 }
 
 /* ---------- 인원명부 ---------- */
