@@ -107,7 +107,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div><h1>항공보안 통합 관리</h1><div class="sub">케이터링운영파트</div></div>
   <div style="display:flex;gap:8px;align-items:center">
     <span id="hubRole" class="badge b-gray"></span>
-    <button class="mini" onclick="logout()">잠금</button>
+    <span class="sessLeft badge b-gray" style="font-variant-numeric:tabular-nums"></span><button class="mini" onclick="logout()">잠금</button>
   </div>
 </div></header>
 <div class="wrap" style="max-width:680px">
@@ -151,7 +151,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div style="display:flex;gap:8px;align-items:center">
     <button class="mini" onclick="goHub()">← 홈</button>
     <span id="role" class="badge b-gray"></span>
-    <button class="mini" onclick="logout()">잠금</button>
+    <span class="sessLeft badge b-gray" style="font-variant-numeric:tabular-nums"></span><button class="mini" onclick="logout()">잠금</button>
   </div>
 </div></header>
 
@@ -237,6 +237,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <h2 class="pt">개인 교육기록 카드
     <span class="tools">
       <select id="cardSel" style="width:190px" onchange="renderCard()"></select>
+      <button onclick="printCard()">PDF 저장</button>
       <button onclick="exportCsv('card')">엑셀(CSV)</button>
     </span>
   </h2>
@@ -267,7 +268,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div style="display:flex;gap:8px;align-items:center">
     <button class="mini" onclick="goHub()">← 홈</button>
     <span id="inspRole" class="badge b-gray"></span>
-    <button class="mini" onclick="logout()">잠금</button>
+    <span class="sessLeft badge b-gray" style="font-variant-numeric:tabular-nums"></span><button class="mini" onclick="logout()">잠금</button>
   </div>
 </div></header>
 <div class="wrap">
@@ -288,7 +289,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div style="display:flex;gap:8px;align-items:center">
     <button class="mini" onclick="goHub()">← 홈</button>
     <span id="extraRole" class="badge b-gray"></span>
-    <button class="mini" onclick="logout()">잠금</button>
+    <span class="sessLeft badge b-gray" style="font-variant-numeric:tabular-nums"></span><button class="mini" onclick="logout()">잠금</button>
   </div>
 </div></header>
 <div class="wrap">
@@ -313,6 +314,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div id="ex-orgv" class="hide">
     <h2 class="pt">이스타항공 항공보안 조직도
       <span class="tools">
+        <button onclick="printOrg()">PDF 저장</button>
         <button class="adm" onclick="openOrg()">조직도 편집</button>
       </span>
     </h2>
@@ -350,7 +352,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   <div style="display:flex;gap:8px;align-items:center">
     <button class="mini" onclick="goHub()">← 홈</button>
     <span id="relRole" class="badge b-gray"></span>
-    <button class="mini" onclick="logout()">잠금</button>
+    <span class="sessLeft badge b-gray" style="font-variant-numeric:tabular-nums"></span><button class="mini" onclick="logout()">잠금</button>
   </div>
 </div></header>
 <div class="wrap">
@@ -563,6 +565,16 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
   </div>
 </div></div>
 
+<!-- 세션 만료 연장 -->
+<div id="mExtend" class="modal"><div class="box" style="max-width:400px;text-align:center">
+  <h2 style="font-size:16px;margin-bottom:12px">로그인 시간 만료 안내</h2>
+  <p id="extendMsg" class="muted" style="margin-bottom:16px"></p>
+  <div style="display:flex;justify-content:center;gap:8px">
+    <button onclick="logout()">로그아웃</button>
+    <button class="pri" onclick="extendSession()">연장하기</button>
+  </div>
+</div></div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -581,6 +593,30 @@ const toast = m => { const t = $('toast'); t.textContent = m; t.style.display = 
 const pdfUrl = p => `${SUPA_URL}/storage/v1/object/public/${BUCKET}/${p}`;
 const days = d => Math.round((new Date(d) - new Date(new Date().toDateString())) / 86400000);
 const plus1y = d => { if (!d) return null; const x = new Date(d); x.setFullYear(x.getFullYear() + 1); return x.toISOString().slice(0, 10); };
+// 업로드 파일의 콘텐츠 타입(확장자 우선) — HTML이 소스로 안 보이고 페이지로 열리게
+function upCtype(f) {
+  const ext = (f.name.match(/\.[a-z0-9]+$/i) || [''])[0].toLowerCase();
+  const map = { '.html': 'text/html', '.htm': 'text/html', '.pdf': 'application/pdf',
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
+    '.txt': 'text/plain', '.csv': 'text/csv' };
+  return map[ext] || f.type || 'application/octet-stream';
+}
+const upOpt = f => ({ contentType: upCtype(f) });
+// HTML 첨부는 종류/저장상태와 무관하게 새 창에 직접 렌더(인코딩 자동 감지). 그 외는 새 탭으로.
+function openAttach(path) {
+  const url = `${SUPA_URL}/storage/v1/object/public/${IBUCKET}/${path}`;
+  if (!/\.html?$/i.test(path)) { window.open(url, '_blank'); return; }
+  const w = window.open('about:blank', '_blank');
+  fetch(url).then(r => r.arrayBuffer()).then(buf => {
+    let cs = 'utf-8';
+    const head = new TextDecoder('ascii').decode(new Uint8Array(buf).slice(0, 2048)).toLowerCase();
+    const m = head.match(/charset=["']?([\w-]+)/);
+    if (m) cs = m[1];
+    let html;
+    try { html = new TextDecoder(cs).decode(buf); } catch (e) { html = new TextDecoder('utf-8').decode(buf); }
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+  }).catch(() => { if (w) w.location.href = url; });
+}
 
 async function login() {
   const id = $('uid').value.trim().toLowerCase();
@@ -602,7 +638,41 @@ function start() {
   document.querySelectorAll('.adm').forEach(e => { if (!isAdmin) e.style.display = 'none'; });
   goHub();
   load(); loadInsp(); loadExtra();
+  startSessTimer();
 }
+
+/* ---------- 자동 로그아웃 (고정 10분 + 60초 대기, 실시간 기준) ---------- */
+const SESS_MIN = 10, WARN_SEC = 60;
+let sessDeadline = 0, tickTimer = null;
+function fmtLeft(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+function startSessTimer() {
+  sessDeadline = Date.now() + SESS_MIN * 60 * 1000;
+  $('mExtend').classList.remove('on');
+  if (!tickTimer) tickTimer = setInterval(tickSess, 1000);
+  tickSess();
+}
+function tickSess() {
+  if (!sessDeadline) return;
+  const now = Date.now();
+  const hard = sessDeadline + WARN_SEC * 1000;
+  if (now >= hard) { logout(); return; }            // 만료+60초 지남 → 즉시 로그아웃
+  const inWarn = now >= sessDeadline;
+  if (inWarn) {
+    $('mExtend').classList.add('on');
+    const secs = Math.ceil((hard - now) / 1000);
+    $('extendMsg').innerHTML = `로그인한 지 ${SESS_MIN}분이 지났습니다. 계속 사용하시겠어요?<br><b>${secs}초</b> 후 자동 로그아웃됩니다.`;
+  } else {
+    $('mExtend').classList.remove('on');
+  }
+  const left = inWarn ? 0 : (sessDeadline - now);
+  document.querySelectorAll('.sessLeft').forEach(e => e.textContent = '남은시간 ' + fmtLeft(left));
+}
+function extendSession() { startSessTimer(); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tickSess(); });
+window.addEventListener('focus', tickSess);
 const VIEWS = ['hub', 'app', 'insp', 'extra', 'rel'];
 function showView(v) { VIEWS.forEach(k => $(k).classList.toggle('hide', k !== v)); }
 function goHub() { showView('hub'); }
@@ -648,6 +718,7 @@ function tab(n) {
   ['dash','index','aware','card','emp'].forEach(k => $('v-' + k).classList.toggle('hide', k !== n));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === n));
 }
+function dashGo(n, sub) { tab(n); if (sub) awView(sub); }
 
 /* ---------- 대시보드 ---------- */
 function awareRows() {
@@ -674,15 +745,15 @@ function renderDash() {
   }).length;
   const nov = VD.filter(v => !v.journal_pdf).length;
   const S = [
-    ['만료 경과', over, 'v-bad', 'aware'],
-    ['만료 임박 (D-30)', soon, 'v-warn', 'aware'],
-    ['인지교육 미이수', none, none ? 'v-bad' : 'v-ok', 'aware'],
+    ['만료 경과', over, 'v-bad', 'aware', 'stat'],
+    ['만료 임박 (D-30)', soon, 'v-warn', 'aware', 'stat'],
+    ['인지교육 미이수', none, none ? 'v-bad' : 'v-ok', 'aware', 'stat'],
     ['서명 미첨부(보안지시)', nopdf, nopdf ? 'v-warn' : 'v-ok', 'index'],
     ['협력업체 일지 미수령', nov, nov ? 'v-warn' : 'v-ok', 'index'],
     ['보안 교육 (등록)', TR.filter(t => t.edu_type !== '기타').length, '', 'index']
   ];
   $('stats').innerHTML = S.map(s =>
-    `<div class="stat" onclick="tab('${s[3]}')"><div class="l">${s[0]}</div><div class="v ${s[2]}">${s[1]}</div></div>`).join('');
+    `<div class="stat" onclick="dashGo('${s[3]}','${s[4] || ''}')"><div class="l">${s[0]}</div><div class="v ${s[2]}">${s[1]}</div></div>`).join('');
 
   $('recent').innerHTML = TR.filter(t => t.edu_type !== '기타').slice(0, 8).map(t => `<tr>
     <td>${t.edu_date}</td><td><span class="badge b-gray">${t.edu_type}</span></td>
@@ -773,7 +844,7 @@ async function saveMat() {
   try {
     const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
     const path = `mat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const up = await db.storage.from('materials').upload(path, f);
+    const up = await db.storage.from('materials').upload(path, f, upOpt(f));
     if (up.error) throw up.error;
     const { error } = await db.from('materials').insert({
       category: $('m_cat').value, title: $('m_title').value.trim(), file_path: path, file_name: f.name });
@@ -1011,7 +1082,7 @@ function openEdu(type, id) {
 async function upload(file, tag) {
   const ext = (file.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
   const name = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-  const { error } = await db.storage.from(BUCKET).upload(name, file);
+  const { error } = await db.storage.from(BUCKET).upload(name, file, upOpt(file));
   if (error) { toast('업로드 실패: ' + error.message); return null; }
   return name;
 }
@@ -1139,7 +1210,7 @@ async function saveEmp() {
   if (f) {
     const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.jpg'])[0].toLowerCase();
     const name = `emp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const { error } = await db.storage.from(PBUCKET).upload(name, f);
+    const { error } = await db.storage.from(PBUCKET).upload(name, f, upOpt(f));
     if (error) { toast('사진 업로드 실패: ' + error.message); return; }
     if (pp) await db.storage.from(PBUCKET).remove([pp]);
     pp = name;
@@ -1193,7 +1264,7 @@ function renderInsp() {
     const files = IFILE.filter(f => f.item_id === m.id);
     const atts = files.length
       ? files.map((f, i) => `<div class="frow" style="grid-template-columns:1fr auto">
-          <a class="nm" href="${inspUrl(f.file_path)}" target="_blank">첨부 ${i + 1}. ${esc(f.display_name || f.file_name)}</a>
+          <a class="nm" href="${inspUrl(f.file_path)}" onclick="openAttach('${f.file_path}');return false" target="_blank">첨부 ${i + 1}. ${esc(f.display_name || f.file_name)}</a>
           <button class="mini adm" onclick="delInspFile(${f.id})">삭제</button>
         </div>`).join('')
       : '<p class="muted" style="font-size:12.5px;margin-top:2px">첨부 없음</p>';
@@ -1253,7 +1324,7 @@ async function saveInspFile() {
   try {
     const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
     const path = `insp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const up = await db.storage.from(IBUCKET).upload(path, f);
+    const up = await db.storage.from(IBUCKET).upload(path, f, upOpt(f));
     if (up.error) throw up.error;
     const { error } = await db.from('inspection_files').insert({
       item_id: +$('if_item').value, display_name: $('if_name').value.trim(),
@@ -1354,7 +1425,7 @@ function renderIc() {
   $('icBody').innerHTML = IC.map(c => {
     const files = ICF.filter(f => f.contact_id === c.id);
     const hr = files.length
-      ? files.map((f, i) => `<a class="badge b-ok" href="${inspUrl(f.file_path)}" target="_blank" title="${esc(f.file_name || '')}">발령${files.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' ')
+      ? files.map((f, i) => `<a class="badge b-ok" href="${inspUrl(f.file_path)}" onclick="openAttach('${f.file_path}');return false" target="_blank" title="${esc(f.file_name || '')}">발령${files.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' ')
       : '<span class="muted">-</span>';
     return `<tr>
     <td>${esc(c.division) || '-'}</td><td>${esc(c.rank) || '-'}</td><td>${esc(c.name) || '-'}</td>
@@ -1424,7 +1495,7 @@ async function saveIc() {
       if (!f) continue;
       const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
       const path = `hr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-      const up = await db.storage.from(IBUCKET).upload(path, f);
+      const up = await db.storage.from(IBUCKET).upload(path, f, upOpt(f));
       if (up.error) throw up.error;
       files.push({ contact_id: cid, file_path: path, file_name: f.name });
     }
@@ -1518,10 +1589,10 @@ function renderSn() {
   $('snCnt').textContent = `총 ${SN.length}건`;
   $('snBody').innerHTML = SN.map(s => {
     const files = SNF.filter(f => f.note_id === s.id);
-    const legacy = s.file_path ? `<div class="frow" style="grid-template-columns:1fr"><a class="nm" href="${inspUrl(s.file_path)}" target="_blank">첨부 · ${esc(s.file_name || '파일')}</a></div>` : '';
+    const legacy = s.file_path ? `<div class="frow" style="grid-template-columns:1fr"><a class="nm" href="${inspUrl(s.file_path)}" onclick="openAttach('${s.file_path}');return false" target="_blank">첨부 · ${esc(s.file_name || '파일')}</a></div>` : '';
     const atts = (files.length || s.file_path)
       ? legacy + files.map((f, i) => `<div class="frow" style="grid-template-columns:1fr auto">
-          <a class="nm" href="${inspUrl(f.file_path)}" target="_blank">첨부 ${i + 1}. ${esc(f.display_name || f.file_name)}</a>
+          <a class="nm" href="${inspUrl(f.file_path)}" onclick="openAttach('${f.file_path}');return false" target="_blank">첨부 ${i + 1}. ${esc(f.display_name || f.file_name)}</a>
           <button class="mini adm" onclick="delSnFile(${f.id})">삭제</button>
         </div>`).join('')
       : '<p class="muted" style="font-size:12.5px;margin-top:2px">첨부 없음</p>';
@@ -1584,7 +1655,7 @@ async function saveSnFile() {
   try {
     const ext = (f.name.match(/\.[a-zA-Z0-9]+$/) || ['.dat'])[0].toLowerCase();
     const path = `etc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const up = await db.storage.from(IBUCKET).upload(path, f);
+    const up = await db.storage.from(IBUCKET).upload(path, f, upOpt(f));
     if (up.error) throw up.error;
     const { error } = await db.from('security_note_files').insert({
       note_id: +$('sf_note').value, display_name: $('sf_name').value.trim(),
@@ -1643,6 +1714,46 @@ function exportCsv(kind) {
     dl('인원명부', [['NO','성명','영문명','직위','사번','소속','입사일','담당업무','근무상태'],
       ...EMP.map((e, i) => [e.sort_no ?? i + 1, e.name, e.name_en, e.position, e.emp_no, e.department, e.hire_date, e.duty, e.status])]);
   }
+}
+
+/* ---------- PDF 저장 (브라우저 인쇄 → PDF) ---------- */
+function openPrint(title, bodyHtml, css) {
+  const w = window.open('', '_blank', 'width=980,height=760');
+  if (!w) { toast('팝업이 차단되었습니다. 이 사이트 팝업을 허용한 뒤 다시 눌러주세요.'); return; }
+  w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${css}</style></head><body>${bodyHtml}</body></html>`);
+  w.document.close();
+  let done = false;
+  const go = () => { if (done) return; done = true; try { w.focus(); w.print(); } catch (e) {} };
+  w.onload = () => setTimeout(go, 400);
+  setTimeout(go, 2500);
+}
+function printCard() {
+  const e = EMP.find(x => x.id === +$('cardSel').value);
+  if (!e) { toast('직원을 먼저 선택하세요'); return; }
+  const css = `body{font-family:"Malgun Gothic",sans-serif;color:#1b1f23;padding:22px;font-size:13px}
+    h2{font-size:16px;margin-bottom:12px}
+    .card{border:1px solid #e3e6ea;border-radius:12px;padding:18px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+    th,td{border-bottom:1px solid #e3e6ea;padding:6px 8px;text-align:left;vertical-align:top}
+    th{background:#fafbfc}
+    .sec{border-top:1px solid #e3e6ea;margin-top:14px;padding-top:10px}
+    .sec h3{font-size:13px;margin-bottom:6px}
+    .muted{color:#8a939e}
+    .badge{font-size:11px;background:#eef0f3;padding:2px 6px;border-radius:5px}
+    a{color:#123a63;text-decoration:none}`;
+  openPrint(`개인교육기록카드_${e.name}`, `<h2>개인 교육기록 카드 — ${esc(e.name)}</h2>` + $('cardBox').innerHTML, css);
+}
+function printOrg() {
+  const css = `body{font-family:"Malgun Gothic",sans-serif;color:#1b1f23;padding:20px}
+    h2{font-size:16px;text-align:center;margin-bottom:14px}
+    .orgchart{position:relative;width:860px;height:400px;margin:0 auto}
+    .orgb{position:absolute;border:1.5px solid #123a63;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px 8px;box-sizing:border-box}
+    .orgb .ot{font-size:12.5px;font-weight:600;line-height:1.28}
+    .orgb .os{font-size:11px;color:#5b6470;margin-top:2px;line-height:1.22}
+    .orgb.hl{background:#e8eff6}
+    @page{size:A4 landscape;margin:12mm}`;
+  openPrint('이스타항공_항공보안_조직도', `<h2>이스타항공 항공보안 조직도</h2><div class="orgchart">${$('orgChart').innerHTML}</div>`, css);
 }
 
 $('upw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
