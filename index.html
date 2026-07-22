@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>항공보안 관리 · 케이터링운영파트</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 :root{
   --ink:#1b1f23; --ink2:#5b6470; --ink3:#8a939e;
@@ -106,6 +107,7 @@ h2.pt{font-size:16px;font-weight:600;margin:22px 0 12px;display:flex;align-items
 <header><div class="wrap">
   <div><h1>항공보안 통합 관리</h1><div class="sub">케이터링운영파트</div></div>
   <div style="display:flex;gap:8px;align-items:center">
+    <button class="mini adm" onclick="doBackup(this)">데이터 백업</button>
     <span id="hubRole" class="badge b-gray"></span>
     <span class="sessLeft badge b-gray" style="font-variant-numeric:tabular-nums"></span><button class="mini" onclick="logout()">잠금</button>
   </div>
@@ -1878,6 +1880,58 @@ function printOrg() {
     .orgb.hl{background:#e8eff6}
     @page{size:A4 landscape;margin:12mm}`;
   openPrint('이스타항공_항공보안_조직도', `<h2>이스타항공 항공보안 조직도</h2><div class="orgchart">${$('orgChart').innerHTML}</div>`, css);
+}
+
+/* ---------- 데이터 백업 (표 JSON+CSV + 첨부파일, ZIP 하나) ---------- */
+function toCSVText(rows) {
+  if (!rows || !rows.length) return '﻿';
+  const cols = [...new Set(rows.flatMap(r => Object.keys(r)))];
+  const cell = v => `"${(v == null ? '' : (typeof v === 'object' ? JSON.stringify(v) : v)).toString().replace(/"/g, '""')}"`;
+  const lines = [cols.join(',')];
+  for (const r of rows) lines.push(cols.map(c => cell(r[c])).join(','));
+  return '﻿' + lines.join('\r\n');
+}
+async function doBackup(btn) {
+  if (typeof JSZip === 'undefined') { toast('백업 도구 로딩 실패. 새로고침 후 다시 시도하세요.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '백업 중...'; }
+  toast('백업 준비 중입니다. 파일이 많으면 시간이 걸립니다.');
+  try {
+    const tables = ['employees', 'trainings', 'attendances', 'vendor_dispatches', 'attachments', 'materials', 'audit_log',
+      'inspection_items', 'inspection_files', 'security_contacts', 'security_notes', 'security_note_files',
+      'internal_contacts', 'internal_contact_files', 'org_boxes'];
+    const zip = new JSZip();
+    const all = { exported_at: new Date().toISOString(), tables: {} };
+    for (const t of tables) {
+      const { data, error } = await db.from(t).select('*');
+      const rows = error ? [] : (data || []);
+      all.tables[t] = rows;
+      zip.file(`csv/${t}.csv`, toCSVText(rows));
+    }
+    zip.file('data.json', JSON.stringify(all, null, 2));
+    const buckets = ['photos', 'training-pdfs', 'materials', 'inspection-docs'];
+    for (const b of buckets) {
+      const { data: list } = await db.storage.from(b).list('', { limit: 1000 });
+      if (!list) continue;
+      for (const f of list) {
+        if (!f.name || f.id === null) continue;
+        try {
+          const url = `${SUPA_URL}/storage/v1/object/public/${b}/${f.name}`;
+          const blob = await (await fetch(url)).blob();
+          zip.file(`files/${b}/${f.name}`, blob);
+        } catch (e) {}
+      }
+    }
+    const out = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(out);
+    a.download = `항공보안_백업_${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    toast('백업 파일이 다운로드되었습니다');
+  } catch (e) {
+    toast('백업 실패: ' + (e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '데이터 백업'; }
+  }
 }
 
 $('upw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
